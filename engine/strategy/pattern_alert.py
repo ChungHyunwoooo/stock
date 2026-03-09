@@ -46,8 +46,10 @@ from engine.strategy.risk_manager import RiskConfig, RiskManager
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "pattern_alert.json"
-SENT_STATE_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "pattern_alert_sent.json"
+from engine.config_path import config_file
+
+CONFIG_PATH = config_file("pattern_alert.json")
+SENT_STATE_PATH = config_file("pattern_alert_sent.json")
 
 _running = False
 _thread: threading.Thread | None = None
@@ -79,11 +81,13 @@ class PatternAlertConfig:
     use_upbit_ranking: bool = True  # Upbit 거래대금 상위 N개 자동 사용
     ranking_count: int = 20  # 상위 N개
     ranking_refresh_sec: int = 300  # 순위 갱신 주기 (5분)
-    # 리스크 관리
-    max_positions_per_symbol: int = 1
-    max_total_positions: int = 5
-    max_daily_loss_pct: float = 5.0
-    max_consecutive_sl: int = 3
+    krw_fallback_rate: float = 1450.0  # KRW/USDT 환율 조회 실패 시 폴백
+    # 리스크 관리 — RiskConfig 기본값과 동일하게 유지
+    # 변경 시 risk_manager.RiskConfig도 함께 확인
+    max_positions_per_symbol: int = RiskConfig.max_positions_per_symbol
+    max_total_positions: int = RiskConfig.max_total_positions
+    max_daily_loss_pct: float = RiskConfig.max_daily_loss_pct
+    max_consecutive_sl: int = RiskConfig.max_consecutive_sl
 
     def save(self) -> None:
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -117,7 +121,7 @@ def _get_krw_rate(exchange: str = "binance") -> float:
             return df_krw["close"].iloc[-1] / df_usdt["close"].iloc[-1]
     except Exception as e:
         logger.warning("환율 추정 실패: %s", e)
-    return 1450.0  # 기본값
+    return _config.krw_fallback_rate if _config else 1450.0
 
 
 # ---------------------------------------------------------------------------
@@ -564,7 +568,7 @@ def _scan_once(config: PatternAlertConfig) -> list[dict]:
 
     webhook = config.discord_webhook
     if not webhook:
-        discord_path = Path(__file__).resolve().parent.parent.parent / "config" / "discord.json"
+        discord_path = config_file("discord.json")
         if discord_path.exists():
             dc = json.loads(discord_path.read_text())
             webhook = dc.get("webhooks", {}).get("tf_1h", dc.get("webhook_url", ""))

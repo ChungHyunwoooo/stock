@@ -47,8 +47,8 @@ def build_signal_chart(signal: TradingSignal) -> bytes | None:
         df = _fetch_chart_frame(signal.symbol, signal.timeframe, exchange)
         if df.empty:
             return None
-        alert_sig = _to_alert_signal(signal)
-        return _generate_rich_chart(df, alert_sig)
+        return _generate_basic_chart(df, signal.symbol, signal.timeframe,
+                                     str(signal.metadata.get('exchange', '')))
     except Exception as exc:
         logger.warning('Signal chart generation failed for %s: %s', signal.symbol, exc)
         return None
@@ -69,8 +69,7 @@ def build_analysis_chart(report: AnalysisReport) -> bytes | None:
             top_signal = report.signals[0]
             if 'exchange' not in top_signal.metadata:
                 top_signal.metadata['exchange'] = report.exchange
-            alert_sig = _to_alert_signal(top_signal)
-            return _generate_rich_chart(df, alert_sig)
+            return _generate_basic_chart(df, report.symbol, report.timeframe, report.exchange)
         else:
             return _generate_basic_chart(df, report.symbol, report.timeframe, report.exchange)
     except Exception as exc:
@@ -97,15 +96,6 @@ def _to_alert_signal(signal: TradingSignal) -> Signal:
         metadata=dict(signal.metadata),
     )
 
-
-# ---------------------------------------------------------------------------
-# Chart generation (delegates to upbit_scanner's rich chart)
-# ---------------------------------------------------------------------------
-
-def _generate_rich_chart(df: pd.DataFrame, signal: Signal) -> bytes | None:
-    """Generate strategy-specific chart using upbit_scanner's generate_chart."""
-    from engine.strategy.upbit_scanner import generate_chart
-    return generate_chart(df, signal)
 
 
 def _generate_basic_chart(

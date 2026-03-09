@@ -14,7 +14,9 @@ import urllib.error
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "discord.json"
+from engine.config_path import config_file
+
+CONFIG_PATH = config_file("discord.json")
 
 SIDE_EMOJI = {"LONG": "\U0001f7e2", "SHORT": "\U0001f534"}
 STRATEGY_COLOR = {

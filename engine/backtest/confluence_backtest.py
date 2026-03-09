@@ -137,9 +137,8 @@ def run_confluence_backtest(
 
     if use_real_funding:
         if funding_data_path is None:
-            funding_data_path = str(
-                Path(__file__).resolve().parent.parent.parent / "config" / "funding_rate_history.json"
-            )
+            from engine.config_path import config_file
+            funding_data_path = str(config_file("funding_rate_history.json"))
         fp = Path(funding_data_path)
         if fp.exists():
             with open(fp) as f:

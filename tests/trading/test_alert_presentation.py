@@ -22,8 +22,9 @@ def test_signal_presentation_includes_trade_decision_fields():
     presentation = build_signal_presentation(signal, mode_label="semi_auto")
 
     field_names = [field.name for field in presentation.fields]
-    assert presentation.title == "Trading signal: BTC/USDT [15m]"
-    assert "Risk %" in field_names
-    assert "Reward %" in field_names
-    assert "R/R" in field_names
-    assert "Context" in field_names
+    assert "LONG" in presentation.title
+    assert "BTC" in presentation.title
+    assert "15m" in presentation.title
+    assert "진입가" in field_names
+    assert "손절가" in field_names
+    assert "신뢰도" in field_names

@@ -9,7 +9,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "bot_config.json"
+from engine.config_path import config_file
+
+CONFIG_PATH = config_file("bot_config.json")
 
 # Default watch symbols (same as scanner)
 DEFAULT_SYMBOLS = [

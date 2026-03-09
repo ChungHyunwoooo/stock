@@ -13,12 +13,16 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# Upbit API 기본 URL (환경변수 UPBIT_API_URL로 오버라이드 가능)
+import os as _os
+UPBIT_API_URL = _os.environ.get("UPBIT_API_URL", "https://api.upbit.com/v1")
+
 # 분석 부적합 종목 (스테이블, 래핑 토큰 등)
 _EXCLUDE = {"KRW-USDT", "KRW-USDC", "KRW-DAI", "KRW-TUSD", "KRW-WBTC", "KRW-WETH"}
 
 # 캐시 (TTL 5분)
 _cache: dict[str, Any] = {"data": [], "ts": 0.0}
-_CACHE_TTL = 300
+_CACHE_TTL = int(_os.environ.get("UPBIT_RANKING_CACHE_TTL", "300"))
 
 
 def fetch_top_krw(count: int = 20, min_volume_krw: float = 5e8) -> list[dict]:
@@ -39,7 +43,7 @@ def fetch_top_krw(count: int = 20, min_volume_krw: float = 5e8) -> list[dict]:
     try:
         # 1. KRW 마켓 목록
         r = requests.get(
-            "https://api.upbit.com/v1/market/all",
+            f"{UPBIT_API_URL}/market/all",
             params={"isDetails": "true"},
             timeout=10,
         )
@@ -51,7 +55,7 @@ def fetch_top_krw(count: int = 20, min_volume_krw: float = 5e8) -> list[dict]:
         for i in range(0, len(krw_markets), 50):
             batch = krw_markets[i:i + 50]
             tr = requests.get(
-                "https://api.upbit.com/v1/ticker",
+                f"{UPBIT_API_URL}/ticker",
                 params={"markets": ",".join(batch)},
                 timeout=10,
             )

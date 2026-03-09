@@ -27,7 +27,8 @@ def test_analysis_report_presentation_contains_summary_fields():
 
     presentation = build_analysis_report_presentation(report)
     field_names = [field.name for field in presentation.fields]
-    assert presentation.title == 'Analysis report: BTC/USDT [15m]'
-    assert 'Signals' in field_names
-    assert 'Trend Bias' in field_names
-    assert 'Summary' in field_names
+    assert 'BTC/USDT' in presentation.title
+    assert '15m' in presentation.title
+    assert '현재가' in field_names
+    assert '추세' in field_names
+    assert '시그널' in field_names

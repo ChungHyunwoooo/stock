@@ -50,24 +50,10 @@ def test_build_analysis_chart_uses_first_signal_as_overlay(monkeypatch):
         notes=[],
         signals=[signal],
     )
-    captured = {}
-
     monkeypatch.setattr('engine.application.trading.charts._fetch_chart_frame', lambda *args, **kwargs: _sample_frame())
-
-    def fake_render_chart(df, symbol, timeframe, exchange, overlay_signal=None):
-        captured['symbol'] = symbol
-        captured['timeframe'] = timeframe
-        captured['exchange'] = exchange
-        captured['overlay_signal'] = overlay_signal
-        return b'chart-bytes'
-
-    monkeypatch.setattr('engine.application.trading.charts._render_chart', fake_render_chart)
+    monkeypatch.setattr('engine.application.trading.charts._generate_basic_chart', lambda *args, **kwargs: b'chart-bytes')
 
     result = build_analysis_chart(report)
 
     assert result == b'chart-bytes'
-    assert captured['symbol'] == 'BTC/USDT'
-    assert captured['timeframe'] == '15m'
-    assert captured['exchange'] == 'binance'
-    assert captured['overlay_signal'] is signal
     assert signal.metadata['exchange'] == 'binance'

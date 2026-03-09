@@ -13,7 +13,9 @@ from engine.alerts.discord import Signal
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "positions.json"
+from engine.config_path import config_file
+
+CONFIG_PATH = config_file("positions.json")
 
 
 @dataclass
