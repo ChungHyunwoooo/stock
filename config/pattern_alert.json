@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "symbols": [],
+  "exchange": "upbit",
+  "timeframes": [
+    "5m",
+    "15m",
+    "30m",
+    "1h",
+    "4h"
+  ],
+  "scan_interval_sec": 30,
+  "lookback_bars": 300,
+  "send_chart": true,
+  "cooldown_sec": 14400,
+  "discord_webhook": "",
+  "use_upbit_ranking": true,
+  "ranking_count": 20,
+  "ranking_refresh_sec": 300,
+  "max_positions_per_symbol": 1,
+  "max_total_positions": 5,
+  "max_daily_loss_pct": 5.0,
+  "max_consecutive_sl": 3
+}

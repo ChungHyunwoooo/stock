@@ -1,0 +1,10 @@
+{
+  "mode": "alert_only",
+  "broker": "paper",
+  "paused": false,
+  "automation_enabled": true,
+  "pending_orders": [],
+  "executions": [],
+  "positions": [],
+  "updated_at": "2026-03-06T00:00:00+00:00"
+}

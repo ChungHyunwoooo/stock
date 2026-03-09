@@ -1,0 +1,56 @@
+{
+  "name": "수박지표 (Watermelon)",
+  "version": "1.0",
+  "status": "testing",
+  "description": "주식단테 수박지표. EMA+StdDev 기반 매집 시각화 지표. 껍질(shell) 안에 수박(melon)이 차면 매수 타이밍 근접. 수박이 껍질을 넘을 때 진입, 껍질이 사라지면 청산.",
+  "markets": ["kr_stock", "crypto_spot"],
+  "direction": "long",
+  "timeframes": ["1d"],
+  "indicators": [
+    {
+      "name": "WATERMELON",
+      "params": {
+        "ema_period": 26,
+        "std_period": 26,
+        "std_mult": 2.5,
+        "shift_period": 25,
+        "scale1": 7.5,
+        "scale2": 4.5,
+        "support_period": 112,
+        "mid_period": 224,
+        "long_period": 448,
+        "ema_gap_pct": 1,
+        "short_gap_pct": 15,
+        "fortress_period": 5
+      },
+      "output": {
+        "shell": "wm_shell",
+        "melon": "wm_melon"
+      }
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      { "left": "wm_melon", "op": "crosses_above", "right": "wm_shell" }
+    ]
+  },
+  "exit": {
+    "logic": "and",
+    "conditions": [
+      { "left": "wm_shell", "op": "crosses_below", "right": 0.01 }
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.05,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["주식단테 단박강의 수박지표"],
+    "tags": ["dante", "watermelon", "accumulation", "custom"],
+    "notes": "EMA 정배열 하락 구간에서만 활성화. 껍질=매집 상한, 수박=모멘텀 충전도. 업그레이드 버전(이평간이격+단기이격+성함락 필터)."
+  }
+}

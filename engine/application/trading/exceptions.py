@@ -1,0 +1,2 @@
+class PendingOrderNotFoundError(ValueError):
+    pass

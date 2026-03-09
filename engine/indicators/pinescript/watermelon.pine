@@ -1,0 +1,68 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0
+// © 수박지표 (Watermelon) — 주식단테 기반
+//@version=5
+indicator("수박지표 (Watermelon)", overlay=false, max_bars_back=500)
+
+// ── Inputs ──
+ema_period     = input.int(26,    "EMA Period")
+std_period     = input.int(26,    "StdDev Period")
+std_mult       = input.float(2.5, "StdDev Multiplier", step=0.1)
+shift_period   = input.int(25,    "Shift Period")
+scale1         = input.float(7.5, "Scale 1 (Shell)", step=0.5)
+scale2         = input.float(4.5, "Scale 2 (Melon)", step=0.5)
+support_period = input.int(112,   "Support EMA")
+mid_period     = input.int(224,   "Mid EMA")
+long_period    = input.int(448,   "Long EMA")
+ema_gap_pct    = input.float(1.0, "EMA Gap %", step=0.5)
+short_gap_pct  = input.float(15.0,"Short Gap %", step=0.5)
+fortress_period = input.int(5,    "Fortress EMA")
+
+// ── Core calculation ──
+ema_short = ta.ema(close, ema_period)
+typical   = (close + high + low) / 3.0
+std_val   = ta.stdev(typical, std_period)
+n1        = (ema_short + std_mult * std_val)[shift_period] / scale1
+
+// ── EMA lines ──
+ema_sup  = ta.ema(close, support_period)
+ema_mid  = ta.ema(close, mid_period)
+ema_lng  = ta.ema(close, long_period)
+ema_fort = ta.ema(close, fortress_period)
+
+// ── 가 condition (EMA alignment + gap filters) ──
+ga = (ema_sup * (100 + ema_gap_pct) / 100 < ema_mid) and (ema_mid * (100 + ema_gap_pct) / 100 < ema_lng) and (ema_mid * (100 + short_gap_pct) / 100 >= close) and (ema_sup < ema_fort)
+
+// ── Active: price above 112 EMA ──
+active = ema_sup <= close
+
+// ── Shell (껍질, blue) ──
+shell = ga and active ? n1 : 0.0
+
+// ── Melon (수박, red) ──
+val   = high / scale1
+inner = n1 < val ? high / scale2 : val
+melon = ga and active ? inner : 0.0
+
+// ── Fill ratio ──
+fill_ratio = shell > 0 ? math.min(100.0, melon / shell * 100.0) : 0.0
+
+// ── Plot ──
+p_shell = plot(shell, "껍질 (Shell)", color=color.new(color.blue, 20), style=plot.style_histogram, linewidth=3)
+p_melon = plot(melon, "수박 (Melon)", color=color.new(color.red, 20), style=plot.style_histogram, linewidth=3)
+
+// ── Fill between shell and melon ──
+fill(p_shell, p_melon, color=shell > melon ? color.new(color.blue, 80) : color.new(color.red, 80))
+
+// ── Zero line ──
+hline(0, "Zero", color=color.gray, linestyle=hline.style_dotted)
+
+// ── Info label ──
+if barstate.islast and shell > 0
+    label.new(bar_index, shell, "충진율: " + str.tostring(fill_ratio, "#.0") + "%", style=label.style_label_down, color=fill_ratio >= 80 ? color.green : color.orange, textcolor=color.white, size=size.normal)
+
+// ── Background when accumulation active ──
+bgcolor(ga and active ? color.new(color.purple, 95) : na)
+
+// ── Alert conditions ──
+alertcondition(ga and active and fill_ratio >= 80, "수박 충진 80%+", "수박지표 충진율 80% 이상 — 집적 거의 완료")
+alertcondition(ga and active and not ga[1], "수박 활성화", "수박지표 활성화 — 집적 시작")

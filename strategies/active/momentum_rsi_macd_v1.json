@@ -1,0 +1,40 @@
+{
+  "name": "RSI + MACD Momentum",
+  "version": "1.0",
+  "status": "testing",
+  "description": "RSI 과매도 탈출 + MACD 골든크로스 조합 모멘텀 전략",
+  "markets": ["us_stock", "crypto_spot"],
+  "direction": "long",
+  "timeframes": ["1d", "4h"],
+  "indicators": [
+    {"name": "RSI", "params": {"timeperiod": 14}, "output": "rsi_14"},
+    {"name": "MACD", "params": {"fastperiod": 12, "slowperiod": 26, "signalperiod": 9},
+     "output": {"macd": "macd_line", "macdsignal": "signal_line", "macdhist": "histogram"}}
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "rsi_14", "op": "crosses_above", "right": 30},
+      {"left": "macd_line", "op": "crosses_above", "right": "signal_line"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "rsi_14", "op": "crosses_below", "right": 70},
+      {"left": "macd_line", "op": "crosses_below", "right": "signal_line"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": 0.09,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["knowledge/rsi/rsi_divergence_basics.md", "knowledge/macd/macd_crossover_strategy.md"],
+    "tags": ["momentum", "trend-following"],
+    "notes": "RSI 30 기준은 과매도 탈출 시그널로 가장 보편적"
+  }
+}

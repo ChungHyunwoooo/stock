@@ -1,0 +1,59 @@
+{
+  "name": "세력계단 (Force Staircase)",
+  "version": "1.0",
+  "status": "testing",
+  "description": "주식단테 세력계단 지표. EMA+StdDev 기반 계단형 지지선으로 세력 매집 구간의 매수 타이밍 포착. 근접1(가격<112EMA) 또는 근접2(가격>112EMA) 시그널 발생 시 진입, 계단선 돌파 시 청산.",
+  "markets": ["kr_stock", "crypto_spot"],
+  "direction": "long",
+  "timeframes": ["1d"],
+  "indicators": [
+    {
+      "name": "STAIRCASE",
+      "params": {
+        "ema_period": 26,
+        "std_period": 26,
+        "std_mult": 2.5,
+        "shift_period": 25,
+        "step_length": 7,
+        "support_period": 112,
+        "long_period": 448,
+        "escape_pct": 8,
+        "ready_pct": 8,
+        "start_pct": 5,
+        "short_gap_pct": 8,
+        "gap_224_pct": 8,
+        "cloud_gap_pct": 8
+      },
+      "output": {
+        "staircase": "staircase",
+        "proximity1": "proximity1",
+        "proximity2": "proximity2"
+      }
+    }
+  ],
+  "entry": {
+    "logic": "or",
+    "conditions": [
+      { "left": "proximity1", "op": "gt", "right": 0.5 },
+      { "left": "proximity2", "op": "gt", "right": 0.5 }
+    ]
+  },
+  "exit": {
+    "logic": "and",
+    "conditions": [
+      { "left": "close", "op": "crosses_above", "right": "staircase" }
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.05,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["주식단테 단박강의 세력계단"],
+    "tags": ["dante", "staircase", "accumulation", "custom"],
+    "notes": "VALUEWHEN, HIGHEST, Ichimoku Senkou Span 2 커스텀 구현. 하락 추세(EMA112<EMA448) 내 매집 구간에서만 작동."
+  }
+}

@@ -1,0 +1,63 @@
+[project]
+name = "trading-strategy-engine"
+version = "0.1.0"
+description = "Trading strategy engine with knowledge base, backtesting, and signal generation"
+requires-python = ">=3.11"
+dependencies = [
+    # Market data
+    "finance-datareader>=0.9.66",
+    "yfinance>=0.2.36",
+    "ccxt>=4.2.0",
+    # Technical indicators
+    "ta-lib>=0.5.1",
+    "pandas-ta>=0.3.14b1",
+    # Backtesting & analysis
+    "bt>=1.1.0",
+    "quantstats>=0.0.62",
+    # Data processing
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "pyarrow>=15.0.0",
+    # Schema & validation
+    "pydantic>=2.6.0",
+    # Persistence
+    "sqlalchemy>=2.0.25",
+    # API
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "discord.py>=2.4.0",
+    # CLI
+    "typer[all]>=0.9.0",
+    # Utils
+    "python-frontmatter>=1.1.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+    "ruff>=0.2.0",
+]
+
+[project.scripts]
+tse = "engine.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["engine", "api"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -1,0 +1,14 @@
+{
+  "webhook_url": "https://discord.com/api/webhooks/REPLACE/ME",
+  "webhooks": {
+    "scalping": "https://discord.com/api/webhooks/REPLACE/ME",
+    "swing": "",
+    "tf_4h": "",
+    "tf_1h": "",
+    "tf_30m": "",
+    "tf_5m": "",
+    "tf_15m": "",
+    "analysis_pattern": ""
+  },
+  "bot_token": "REPLACE_WITH_DISCORD_BOT_TOKEN"
+}

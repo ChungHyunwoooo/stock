@@ -1,0 +1,77 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0
+// © 세력계단 (Force Staircase) — 주식단테 기반
+//@version=5
+indicator("세력계단 (Staircase)", overlay=true, max_bars_back=500)
+
+// ── Inputs ──
+ema_period    = input.int(26,  "EMA Period")
+std_period    = input.int(26,  "StdDev Period")
+std_mult      = input.float(2.5, "StdDev Multiplier", step=0.1)
+shift_period  = input.int(25,  "Shift Period")
+step_length   = input.int(7,   "Step Length")
+support_period = input.int(112, "Support EMA")
+long_period   = input.int(448, "Long EMA")
+ema_224_period = input.int(224, "Mid EMA (224)")
+escape_pct    = input.float(8.0, "Escape %", step=0.5)
+ready_pct     = input.float(8.0, "Ready %", step=0.5)
+start_pct     = input.float(5.0, "Start %", step=0.5)
+short_gap_pct = input.float(8.0, "Short Gap %", step=0.5)
+gap_224_pct   = input.float(8.0, "224 Gap %", step=0.5)
+cloud_gap_pct = input.float(8.0, "Cloud Gap %", step=0.5)
+
+// ── Core staircase line ──
+ema_short = ta.ema(close, ema_period)
+typical   = (close + high + low) / 3.0
+std_val   = ta.stdev(typical, std_period)
+a         = (ema_short + std_mult * std_val)[shift_period]
+
+// b = highest(a, step_length)
+b = ta.highest(a, step_length)
+
+// x = valuewhen(a breaks above previous highest, a)
+x = ta.valuewhen(a > b[1], a, 0)
+
+// y = valuewhen(a drops from previous bar, x) → step function
+y = ta.valuewhen(a < a[1], x, 0)
+
+// ── EMA lines ──
+ema_sup = ta.ema(close, support_period)
+ema_lng = ta.ema(close, long_period)
+ema_224 = ta.ema(close, ema_224_period)
+
+// ── Main staircase line ──
+downtrend = ema_sup < ema_lng
+escape_mask = (close * (100 + escape_pct) / 100 >= a) and downtrend
+staircase_line = escape_mask ? a : y
+
+// ── Ichimoku Senkou Span 2 ──
+ichi_highest = ta.highest(high, 52)
+ichi_lowest  = ta.lowest(low, 52)
+senkou2      = (ichi_highest + ichi_lowest) / 2.0  // displaced 26 bars forward
+
+// ── 224 EMA band filter ──
+ema_band = (ema_224 * (100 + gap_224_pct) / 100 >= close) and (ema_224 * (100 - gap_224_pct) / 100 <= close)
+
+// ── Common conditions ──
+near_staircase = a * (100 + short_gap_pct) / 100 > close
+
+// ── 근접1: price below 112 EMA, near staircase ──
+z1 = (ema_sup > close) and (senkou2[26] * (100 + cloud_gap_pct) / 100 > close)
+prox1 = (close * (100 + ready_pct) / 100 >= a) and near_staircase and downtrend and z1 and ema_band
+
+// ── 근접2: price above 112 EMA, near staircase ──
+z2 = (ema_sup < close) and (senkou2[26] * (100 + cloud_gap_pct) / 100 > close)
+prox2 = (close * (100 + start_pct) / 100 >= a) and near_staircase and downtrend and z2 and ema_band
+
+// ── Plot ──
+plot(staircase_line, "세력계단", color=color.new(color.yellow, 0), linewidth=2, style=plot.style_stepline)
+plot(ema_sup, "EMA 112", color=color.new(color.blue, 60), linewidth=1)
+plot(ema_lng, "EMA 448", color=color.new(color.red, 60), linewidth=1)
+
+// ── Proximity signals ──
+plotshape(prox1, "근접1 (매수준비)", style=shape.triangleup, location=location.belowbar, color=color.orange, size=size.small)
+plotshape(prox2, "근접2 (매수시작)", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+
+// ── Background highlight ──
+bgcolor(prox1 ? color.new(color.orange, 90) : na)
+bgcolor(prox2 ? color.new(color.green, 90) : na)

@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "mode": "live",
+  "exchange": "upbit",
+  "scan_interval_sec": 30,
+  "interval": "5m",
+  "bar_count": 200,
+  "max_symbols": 20,
+  "symbols": [],
+  "compare_window_sec": 600,
+  "rollout_pct": 100,
+  "min_confidence": 0.0,
+  "send_chart": true,
+  "usdkrw": 1350.0,
+  "sample_size": 10,
+  "track_pnl": true,
+  "close_after_sec": 3600,
+  "enable_tf_5m": true,
+  "enable_tf_30m": true,
+  "enable_tf_1h": true,
+  "enable_tf_4h": true,
+  "enable_regime_filter": false
+}

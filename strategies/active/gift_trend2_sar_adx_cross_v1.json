@@ -1,0 +1,40 @@
+{
+  "name": "기프트 추세2 (SAR + DI 크로스)",
+  "version": "1.0",
+  "status": "testing",
+  "description": "주식단테 기프트세트 - 추세2 전략. Close가 SAR 위에 있을 때 DI+ 크로스업 진입. 추세1보다 민감한 변수(period=1, af=0.009).",
+  "markets": ["kr_stock", "us_stock", "crypto_futures"],
+  "direction": "both",
+  "timeframes": ["5m", "1d"],
+  "indicators": [
+    {"name": "SAR", "params": {"acceleration": 0.009, "maximum": 0.12}, "output": "sar"},
+    {"name": "PLUS_DI", "params": {"timeperiod": 1}, "output": "plus_di"},
+    {"name": "MINUS_DI", "params": {"timeperiod": 1}, "output": "minus_di"}
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "gt", "right": "sar"},
+      {"left": "plus_di", "op": "crosses_above", "right": "minus_di"}
+    ]
+  },
+  "exit": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "lt", "right": "sar"},
+      {"left": "minus_di", "op": "crosses_above", "right": "plus_di"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["raw/주식단테_기프트세트_해외선물/"],
+    "tags": ["trend-following", "sar", "adx", "주식단테", "기프트세트"],
+    "notes": "원본 변수: period=1, af=0.009, maxaf=0.12. 추세1과 달리 DI 크로스업이 진입 트리거. 매수진입=매도청산, 매수청산=매도진입 대칭 구조."
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "Bollinger Bands Mean Reversion",
+  "version": "2.0",
+  "status": "testing",
+  "description": "볼린저 밴드 하단 이탈 후 평균 회귀 전략. RSI 과매도 확인으로 신뢰도 향상.",
+  "markets": ["kr_stock", "us_stock"],
+  "direction": "long",
+  "timeframes": ["1d"],
+  "indicators": [
+    {
+      "name": "BBANDS",
+      "params": {"timeperiod": 20, "nbdevup": 2, "nbdevdn": 2},
+      "output": {"upperband": "bb_upper", "middleband": "bb_middle", "lowerband": "bb_lower"}
+    },
+    {"name": "RSI", "params": {"timeperiod": 14}, "output": "rsi_14"}
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "bb_lower"},
+      {"left": "rsi_14", "op": "lt", "right": 30}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "bb_middle"},
+      {"left": "rsi_14", "op": "gt", "right": 70}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": 0.04,
+    "risk_per_trade_pct": 0.01,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["knowledge/bollinger_bands/bb_mean_reversion.md"],
+    "tags": ["mean-reversion", "bollinger-bands", "counter-trend"],
+    "notes": "볼린저 밴드 하단 이탈 시 과매도 RSI 확인으로 진입 신뢰도를 높임. 중간 밴드(SMA20) 복귀 시 청산."
+  }
+}

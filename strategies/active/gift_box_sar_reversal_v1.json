@@ -1,0 +1,36 @@
+{
+  "name": "기프트 박스 (SAR 반전)",
+  "version": "1.0",
+  "status": "testing",
+  "description": "주식단테 기프트세트 - 박스 전략. 순수 Parabolic SAR 반전 매매. 크로스다운 매수 / 크로스업 매도 (역추세). 박스권 장세에 유리.",
+  "markets": ["kr_stock", "us_stock", "crypto_futures"],
+  "direction": "both",
+  "timeframes": ["5m", "1d"],
+  "indicators": [
+    {"name": "SAR", "params": {"acceleration": 0.018, "maximum": 0.09}, "output": "sar"}
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "sar"}
+    ]
+  },
+  "exit": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "sar"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "source_references": ["raw/주식단테_기프트세트_해외선물/"],
+    "tags": ["mean-reversion", "sar", "주식단테", "기프트세트", "박스권"],
+    "notes": "원본 변수: af=0.018, maxaf=0.09. ADX 필터 없이 SAR만 사용. 크로스다운=매수(역추세), 크로스업=매도. 박스권에서 효과적, 추세장에서는 손실 가능."
+  }
+}
