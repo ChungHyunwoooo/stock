@@ -81,6 +81,9 @@ class PatternAlertConfig:
     ranking_count: int = 20  # 상위 N개
     ranking_refresh_sec: int = 300  # 순위 갱신 주기 (5분)
     krw_fallback_rate: float = 1450.0  # KRW/USDT 환율 조회 실패 시 폴백
+    # Binance 선물
+    scan_binance_futures: bool = False
+    binance_futures_symbols: list[str] = field(default_factory=lambda: ["BTC/USDT", "ETH/USDT"])
     # 리스크 관리 — RiskConfig 기본값과 동일하게 유지
     # 변경 시 risk_manager.RiskConfig도 함께 확인
     max_positions_per_symbol: int = RiskConfig.max_positions_per_symbol
@@ -331,7 +334,7 @@ def _generate_chart(symbol: str, results: list[TFResult], krw_rate: float) -> by
 # 디스코드 전송
 # ---------------------------------------------------------------------------
 
-def _build_message(symbol: str, results: list[TFResult], krw_rate: float) -> str:
+def _build_message(symbol: str, results: list[TFResult], krw_rate: float, *, is_binance_futures: bool = False) -> str:
     """멀티TF 분석 결과 → 디스코드 메시지."""
     base = symbol.split("/")[0]
     from zoneinfo import ZoneInfo
@@ -354,8 +357,9 @@ def _build_message(symbol: str, results: list[TFResult], krw_rate: float) -> str
     ref = next((r for r in results if r.tf == "1h"), results[0])
     price_str = _fmt_krw(ref.current_price * krw_rate)
 
+    prefix = "**[Binance Futures]** " if is_binance_futures else ""
     lines = [
-        f"## {dir_emoji.get(overall, '⚪')} {base}  {price_str}  ({now})",
+        f"## {dir_emoji.get(overall, '⚪')} {prefix}{base}  {price_str}  ({now})",
         f"**{overall}** — LONG {long_count} / SHORT {short_count} / NEUTRAL {directions.count('NEUTRAL')}",
     ]
 
@@ -518,17 +522,25 @@ def _is_alertable(results: list[TFResult]) -> bool:
 # 메인 루프
 # ---------------------------------------------------------------------------
 
-def _resolve_symbols(config: PatternAlertConfig) -> tuple[list[str], str]:
+def _resolve_symbols(config: PatternAlertConfig) -> list[tuple[str, str]]:
     """설정에 따라 심볼 목록과 거래소 결정.
 
     Returns:
-        (symbols, exchange)
+        list of (symbol, exchange) tuples
     """
+    result: list[tuple[str, str]] = []
+
     if config.use_upbit_ranking:
         from engine.data.upbit_ranking import get_top_symbols
         symbols = get_top_symbols(config.ranking_count)
-        return symbols, "upbit"
-    return config.symbols, config.exchange
+        result.extend((s, "upbit") for s in symbols)
+    else:
+        result.extend((s, config.exchange) for s in config.symbols)
+
+    if config.scan_binance_futures:
+        result.extend((s, "binance_futures") for s in config.binance_futures_symbols)
+
+    return result
 
 def _scan_once(config: PatternAlertConfig) -> list[dict]:
     """전체 심볼 1회 스캔. 알림 발송된 결과 목록 반환."""
@@ -537,19 +549,8 @@ def _scan_once(config: PatternAlertConfig) -> list[dict]:
     _scan_count += 1
     _last_scan_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    symbols, exchange = _resolve_symbols(config)
-    logger.info("패턴 스캔 #%d 시작 (%d 심볼, %s)", _scan_count, len(symbols), exchange)
-
-    # KRW 심볼이면 환율 변환 불필요
-    is_krw = any("/KRW" in s for s in symbols)
-    krw_rate = 1.0 if is_krw else _get_krw_rate(exchange)
-
-    # 스캔용 config 복사 (exchange 오버라이드)
-    scan_config = PatternAlertConfig(**{
-        **{k: getattr(config, k) for k in config.__dataclass_fields__},
-        "exchange": exchange,
-        "symbols": symbols,
-    })
+    symbol_exchange_pairs = _resolve_symbols(config)
+    logger.info("패턴 스캔 #%d 시작 (%d 심볼)", _scan_count, len(symbol_exchange_pairs))
 
     webhook = config.discord_webhook
     if not webhook:
@@ -558,22 +559,39 @@ def _scan_once(config: PatternAlertConfig) -> list[dict]:
             dc = json.loads(discord_path.read_text())
             webhook = dc.get("webhooks", {}).get("tf_1h", dc.get("webhook_url", ""))
 
+    # 거래소별 KRW 환율 캐시
+    _krw_rate_cache: dict[str, float] = {}
+
+    def _get_krw_rate_cached(exchange: str) -> float:
+        if exchange not in _krw_rate_cache:
+            is_krw = exchange == "upbit"
+            _krw_rate_cache[exchange] = 1.0 if is_krw else _get_krw_rate(exchange)
+        return _krw_rate_cache[exchange]
+
     sent_results = []
-    for symbol in symbols:
+    for symbol, exchange in symbol_exchange_pairs:
         try:
+            scan_config = PatternAlertConfig(**{
+                **{k: getattr(config, k) for k in config.__dataclass_fields__},
+                "exchange": exchange,
+                "symbols": [symbol],
+            })
+
             results = analyze_symbol(symbol, scan_config)
             if not results:
                 continue
 
             if not _is_alertable(results):
-                logger.debug("%s: 알림 조건 미충족", symbol)
+                logger.debug("%s (%s): 알림 조건 미충족", symbol, exchange)
                 continue
 
             if not _should_send(symbol, results, config.cooldown_sec):
-                logger.debug("%s: 쿨다운 중", symbol)
+                logger.debug("%s (%s): 쿨다운 중", symbol, exchange)
                 continue
 
-            message = _build_message(symbol, results, krw_rate)
+            krw_rate = _get_krw_rate_cached(exchange)
+            is_binance_futures = exchange == "binance_futures"
+            message = _build_message(symbol, results, krw_rate, is_binance_futures=is_binance_futures)
 
             chart_bytes = None
             if config.send_chart:
@@ -581,17 +599,18 @@ def _scan_once(config: PatternAlertConfig) -> list[dict]:
 
             if webhook:
                 ok = _send_discord(webhook, message, chart_bytes)
-                logger.info("%s: 디스코드 전송 %s", symbol, "성공" if ok else "실패")
+                logger.info("%s (%s): 디스코드 전송 %s", symbol, exchange, "성공" if ok else "실패")
             else:
                 logger.warning("디스코드 웹훅 미설정")
 
             sent_results.append({
-                "symbol": symbol, "direction": results[0].direction if results else "NEUTRAL",
+                "symbol": symbol, "exchange": exchange,
+                "direction": results[0].direction if results else "NEUTRAL",
                 "patterns": [r.pattern for r in results if r.pattern != "없음"],
             })
 
         except Exception as e:
-            logger.error("%s 스캔 에러: %s", symbol, e, exc_info=True)
+            logger.error("%s (%s) 스캔 에러: %s", symbol, exchange, e, exc_info=True)
 
     _save_sent_state()
     logger.info("패턴 스캔 #%d 완료 (%d 알림)", _scan_count, len(sent_results))
@@ -655,29 +674,38 @@ def scan_now(config: PatternAlertConfig | None = None) -> list[dict]:
     cfg = config or _config or PatternAlertConfig.load()
     return _scan_once(cfg)
 
-def analyze_single(symbol: str, config: PatternAlertConfig | None = None) -> tuple[list[TFResult], str, float]:
+def analyze_single(symbol: str, config: PatternAlertConfig | None = None, exchange: str | None = None) -> tuple[list[TFResult], str, float]:
     """단일 심볼 분석 (Discord 메뉴얼 스캔용).
+
+    Args:
+        symbol: 심볼 (예: "BTC/USDT", "BTC/KRW")
+        config: 설정 (None이면 로드)
+        exchange: 거래소 명시 (예: "binance", "binance_futures", "upbit"). None이면 심볼로 자동 결정.
 
     Returns:
         (results, message, krw_rate)
     """
     cfg = config or _config or PatternAlertConfig.load()
 
-    # 심볼에 따라 거래소 자동 결정
-    if "/KRW" in symbol or symbol.startswith("KRW-"):
-        exchange = "upbit"
-        krw_rate = 1.0
+    # 거래소 결정: 명시 > 심볼 패턴 > config 기본값
+    if exchange is not None:
+        resolved_exchange = exchange
+    elif "/KRW" in symbol or symbol.startswith("KRW-"):
+        resolved_exchange = "upbit"
     else:
-        exchange = cfg.exchange
-        krw_rate = _get_krw_rate(exchange)
+        resolved_exchange = cfg.exchange
+
+    is_krw = resolved_exchange == "upbit" and ("/KRW" in symbol or symbol.startswith("KRW-"))
+    krw_rate = 1.0 if is_krw else _get_krw_rate(resolved_exchange)
+    is_binance_futures = resolved_exchange == "binance_futures"
 
     scan_cfg = PatternAlertConfig(**{
         **{k: getattr(cfg, k) for k in cfg.__dataclass_fields__},
-        "exchange": exchange,
+        "exchange": resolved_exchange,
     })
 
     results = analyze_symbol(symbol, scan_cfg)
-    message = _build_message(symbol, results, krw_rate) if results else f"{symbol}: 분석 데이터 없음"
+    message = _build_message(symbol, results, krw_rate, is_binance_futures=is_binance_futures) if results else f"{symbol}: 분석 데이터 없음"
     return results, message, krw_rate
 
 def generate_chart_for_symbol(symbol: str, results: list[TFResult], krw_rate: float) -> bytes | None:

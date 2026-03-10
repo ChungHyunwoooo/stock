@@ -10,6 +10,7 @@ import logging
 from typing import Any
 
 import ccxt
+import pandas as pd
 
 from engine.core.models import BrokerKind, ExecutionRecord, OrderRequest
 from engine.execution.broker_base import BaseBroker
@@ -49,6 +50,8 @@ class BinanceBroker(BaseBroker):
         if testnet:
             self._exchange.enable_demo_trading(True)
             self.broker_kind = BrokerKind.paper
+
+        self._market_info_cache: dict[str, dict] = {}
 
     # ── 거래소별 구현 ───────────────────────────────────────
 
@@ -190,3 +193,58 @@ class BinanceBroker(BaseBroker):
             logger.info("마진 모드: %s → %s", converted, mode)
         except ccxt.BaseError as e:
             logger.warning("마진 모드 설정 실패: %s — %s", converted, e)
+
+    def fetch_ohlcv(self, symbol: str, timeframe: str = "1m", limit: int = 50) -> pd.DataFrame:
+        """OHLCV 조회 → DataFrame (index: UTC datetime)."""
+        converted = self._convert_symbol(symbol)
+        try:
+            bars = self._exchange.fetch_ohlcv(converted, timeframe, limit=limit)
+            df = pd.DataFrame(bars, columns=["timestamp", "open", "high", "low", "close", "volume"])
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+            df.set_index("timestamp", inplace=True)
+            logger.info("OHLCV 조회: %s %s %d봉", converted, timeframe, len(df))
+            return df
+        except ccxt.BaseError as e:
+            logger.error("OHLCV 조회 실패: %s — %s", converted, e)
+            return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+
+    def load_market_info(self, symbol: str) -> dict:
+        """시장 정보 조회 (precision, limits). 심볼별 캐시."""
+        converted = self._convert_symbol(symbol)
+        if converted in self._market_info_cache:
+            return self._market_info_cache[converted]
+        try:
+            self._exchange.load_markets()
+            if converted in self._exchange.markets:
+                m = self._exchange.markets[converted]
+                info = {
+                    "price_precision": m.get("precision", {}).get("price", 0.01),
+                    "qty_precision": m.get("precision", {}).get("amount", 0.001),
+                    "max_qty": (m.get("limits", {}).get("amount", {}) or {}).get("max"),
+                    "min_qty": (m.get("limits", {}).get("amount", {}) or {}).get("min"),
+                }
+            else:
+                logger.warning("시장 정보 없음: %s", converted)
+                info = {}
+            self._market_info_cache[converted] = info
+            logger.info("시장 정보 로드: %s", converted)
+            return info
+        except ccxt.BaseError as e:
+            logger.error("시장 정보 조회 실패: %s — %s", converted, e)
+            return {}
+
+    def clamp_quantity(self, symbol: str, quantity: float) -> float:
+        """시장 정보 기반 수량 클램핑 (max/min qty, step size)."""
+        info = self._market_info_cache.get(self._convert_symbol(symbol)) or self.load_market_info(symbol)
+        if not info:
+            return quantity
+        max_qty = info.get("max_qty")
+        min_qty = info.get("min_qty")
+        qty_step = info.get("qty_precision", 0.001)
+        if max_qty and quantity > max_qty:
+            quantity = max_qty
+        if min_qty and quantity < min_qty:
+            return 0.0
+        if qty_step and qty_step > 0:
+            quantity = float(int(quantity / qty_step) * qty_step)
+        return quantity
