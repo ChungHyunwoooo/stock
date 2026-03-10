@@ -27,6 +27,7 @@ web/tsconfig.tsbuildinfo
 
 config/discord.json
 config/alert_runtime.json
+config/broker.json
 config/exchange_symbol_cache/
 
 state/

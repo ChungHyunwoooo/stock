@@ -1,0 +1,20 @@
+{
+  "default": "paper",
+  "exchanges": {
+    "upbit": {
+      "api_key": "${UPBIT_API_KEY}",
+      "secret": "${UPBIT_SECRET_KEY}"
+    },
+    "binance": {
+      "api_key": "${BINANCE_API_KEY}",
+      "secret": "${BINANCE_SECRET_KEY}",
+      "market_type": "spot",
+      "testnet": true,
+      "leverage": 1
+    }
+  },
+  "risk": {
+    "default_stake_pct": 5,
+    "max_open_trades": 5
+  }
+}

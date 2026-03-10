@@ -7,7 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from engine.schema import StrategyDefinition
-from engine.core.db_models import BacktestRecord, KnowledgeRecord, StrategyRecord
+from engine.core.db_models import (
+    BacktestRecord,
+    KnowledgeRecord,
+    OrderRecord,
+    StrategyRecord,
+    TradeRecord,
+)
 
 class StrategyRepository:
     def save(self, session: Session, strategy: StrategyDefinition) -> StrategyRecord:
@@ -84,3 +90,133 @@ class KnowledgeRepository:
         stmt = select(KnowledgeRecord)
         all_records = list(session.scalars(stmt).all())
         return [r for r in all_records if tag in json.loads(r.tags_json)]
+
+
+class TradeRepository:
+    """포지션 단위 거래 기록 저장소."""
+
+    def save(self, session: Session, record: TradeRecord) -> TradeRecord:
+        session.add(record)
+        session.flush()
+        return record
+
+    def get_by_trade_id(self, session: Session, trade_id: str) -> TradeRecord | None:
+        stmt = select(TradeRecord).where(TradeRecord.trade_id == trade_id)
+        return session.scalars(stmt).first()
+
+    def list_open(self, session: Session, symbol: str | None = None) -> list[TradeRecord]:
+        stmt = select(TradeRecord).where(TradeRecord.status == "open")
+        if symbol:
+            stmt = stmt.where(TradeRecord.symbol == symbol)
+        return list(session.scalars(stmt).all())
+
+    def list_closed(
+        self,
+        session: Session,
+        symbol: str | None = None,
+        strategy_name: str | None = None,
+        broker: str | None = None,
+        limit: int = 100,
+    ) -> list[TradeRecord]:
+        stmt = select(TradeRecord).where(TradeRecord.status == "closed")
+        if symbol:
+            stmt = stmt.where(TradeRecord.symbol == symbol)
+        if strategy_name:
+            stmt = stmt.where(TradeRecord.strategy_name == strategy_name)
+        if broker:
+            stmt = stmt.where(TradeRecord.broker == broker)
+        stmt = stmt.order_by(TradeRecord.exit_at.desc()).limit(limit)
+        return list(session.scalars(stmt).all())
+
+    def close_trade(
+        self,
+        session: Session,
+        trade_id: str,
+        exit_price: float,
+        exit_quantity: float,
+        exit_fee: float,
+        exit_reason: str,
+        exit_at: "datetime",
+    ) -> TradeRecord | None:
+        record = self.get_by_trade_id(session, trade_id)
+        if record is None or record.status != "open":
+            return None
+
+        record.exit_price = exit_price
+        record.exit_quantity = exit_quantity
+        record.exit_fee = exit_fee
+        record.exit_reason = exit_reason
+        record.exit_at = exit_at
+        record.status = "closed"
+
+        # 손익 계산
+        if record.side == "long":
+            record.profit_abs = (exit_price - record.entry_price) * exit_quantity - record.entry_fee - exit_fee
+        else:
+            record.profit_abs = (record.entry_price - exit_price) * exit_quantity - record.entry_fee - exit_fee
+
+        record.profit_pct = round(record.profit_abs / record.stake_amount * 100, 4) if record.stake_amount else 0.0
+        record.duration_seconds = int((exit_at - record.entry_at).total_seconds())
+        session.flush()
+        return record
+
+    def summary(
+        self,
+        session: Session,
+        strategy_name: str | None = None,
+        broker: str | None = None,
+    ) -> dict:
+        """거래 성과 요약."""
+        trades = self.list_closed(session, strategy_name=strategy_name, broker=broker, limit=10000)
+        if not trades:
+            return {"total": 0}
+
+        wins = [t for t in trades if (t.profit_abs or 0) > 0]
+        losses = [t for t in trades if (t.profit_abs or 0) <= 0]
+        total_profit = sum(t.profit_abs or 0 for t in trades)
+        avg_profit_pct = sum(t.profit_pct or 0 for t in trades) / len(trades)
+
+        return {
+            "total": len(trades),
+            "wins": len(wins),
+            "losses": len(losses),
+            "win_rate": round(len(wins) / len(trades) * 100, 1),
+            "total_profit": round(total_profit, 0),
+            "avg_profit_pct": round(avg_profit_pct, 2),
+            "best_trade": round(max((t.profit_pct or 0) for t in trades), 2),
+            "worst_trade": round(min((t.profit_pct or 0) for t in trades), 2),
+        }
+
+
+class OrderRepository:
+    """주문 단위 기록 저장소."""
+
+    def save(self, session: Session, record: OrderRecord) -> OrderRecord:
+        session.add(record)
+        session.flush()
+        return record
+
+    def get_by_order_id(self, session: Session, order_id: str) -> OrderRecord | None:
+        stmt = select(OrderRecord).where(OrderRecord.order_id == order_id)
+        return session.scalars(stmt).first()
+
+    def list_by_trade(self, session: Session, trade_id: int) -> list[OrderRecord]:
+        stmt = select(OrderRecord).where(OrderRecord.trade_id == trade_id).order_by(OrderRecord.created_at)
+        return list(session.scalars(stmt).all())
+
+    def update_status(
+        self,
+        session: Session,
+        order_id: str,
+        status: str,
+        filled: float | None = None,
+    ) -> OrderRecord | None:
+        record = self.get_by_order_id(session, order_id)
+        if record is None:
+            return None
+        record.status = status
+        if filled is not None:
+            record.filled = filled
+            record.remaining = record.amount - filled
+        session.flush()
+        return record
