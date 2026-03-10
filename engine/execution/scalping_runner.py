@@ -23,11 +23,16 @@ from typing import Any
 import ccxt
 import pandas as pd
 
+import numpy as np
+
 from engine.strategy.scalping_ema_crossover import (
     ScalpResult,
     ScalpSignal,
     detect_scalp_signal,
 )
+from engine.strategy.scalping_risk import ScalpRiskConfig, calculate_scalp_risk
+from engine.strategy.pullback_detector import detect_pullback
+from engine.strategy.pattern_detector import find_local_extrema
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,6 +55,7 @@ class ScalpingRunner:
         cooldown_sec: int = 300,
         check_interval: int = 30,
         testnet: bool = True,
+        risk_config: ScalpRiskConfig | None = None,
     ) -> None:
         self._symbol = symbol
         self._leverage = leverage
@@ -57,6 +63,8 @@ class ScalpingRunner:
         self._cooldown_sec = cooldown_sec
         self._check_interval = check_interval
         self._running = False
+        self._risk_config = risk_config or ScalpRiskConfig()
+        self._capital: float = 0.0  # setup()에서 잔고 조회 후 설정
 
         # ccxt Binance futures (USDM)
         self._exchange = ccxt.binanceusdm({
@@ -90,6 +98,7 @@ class ScalpingRunner:
         # 잔고 확인
         balance = self._exchange.fetch_balance()
         usdt_free = float(balance.get("free", {}).get("USDT", 0))
+        self._capital = usdt_free
         logger.info("USDT 잔고: %.2f (가용)", usdt_free)
 
         if usdt_free < self._stake_usdt:
@@ -105,6 +114,52 @@ class ScalpingRunner:
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
         df.set_index("timestamp", inplace=True)
         return df
+
+    def _detect_pullback(self, df: pd.DataFrame) -> ScalpResult | None:
+        """눌림목 패턴 감지 → ScalpResult 변환."""
+        close = df["close"].values.astype(float)
+        opn = df["open"].values.astype(float)
+        high = df["high"].values.astype(float)
+        low = df["low"].values.astype(float)
+
+        # EMA 계산
+        ema21 = pd.Series(close).ewm(span=21, adjust=False).mean().values
+        ema55 = pd.Series(close).ewm(span=55, adjust=False).mean().values
+
+        # 지지/저항 (local extrema)
+        low_mins, high_maxs = find_local_extrema(low, order=5)
+        _, high_maxs = find_local_extrema(high, order=5)
+
+        i = len(close) - 1
+        sig = detect_pullback(
+            opn, high, low, close, i,
+            ema21, ema55, low_mins, high_maxs,
+            require_candle=False,
+        )
+        if sig is None:
+            return None
+
+        side_val = "long" if sig.side == "LONG" else "short"
+        price = float(close[-1])
+
+        # 동적 리스크 적용
+        risk = None
+        if self._capital > 0:
+            risk = calculate_scalp_risk(
+                df, price, side_val, self._capital, self._risk_config,
+            )
+
+        return ScalpResult(
+            signal=ScalpSignal.LONG if side_val == "long" else ScalpSignal.SHORT,
+            entry_price=price,
+            stop_loss=risk.stop_loss if risk else sig.stop_loss,
+            take_profit=risk.take_profit if risk else sig.take_profit,
+            ema_fast=float(ema21[i]),
+            ema_slow=float(ema55[i]),
+            rsi=0,
+            reason=f"눌림목 {side_val.upper()} | {risk.reason if risk else ''}",
+            risk=risk,
+        )
 
     def _in_cooldown(self) -> bool:
         return time.time() - self._last_signal_time < self._cooldown_sec
@@ -132,7 +187,22 @@ class ScalpingRunner:
     def _open_position(self, result: ScalpResult) -> None:
         """포지션 진입."""
         side = "buy" if result.signal == ScalpSignal.LONG else "sell"
-        quantity = round(self._stake_usdt * self._leverage / result.entry_price, 4)
+
+        # 동적 리스크: risk 결과가 있으면 사용, 없으면 기존 방식
+        if result.risk is not None:
+            quantity = result.risk.quantity
+            leverage = result.risk.leverage
+            # 동적 레버리지 적용
+            if leverage != self._leverage:
+                try:
+                    self._exchange.set_leverage(leverage, self._symbol)
+                    logger.info("레버리지 변경: %dx → %dx", self._leverage, leverage)
+                except Exception as e:
+                    logger.warning("레버리지 변경 실패: %s (기존 %dx 유지)", e, self._leverage)
+                    leverage = self._leverage
+        else:
+            quantity = round(self._stake_usdt * self._leverage / result.entry_price, 4)
+            leverage = self._leverage
 
         try:
             order = self._exchange.create_order(
@@ -148,6 +218,7 @@ class ScalpingRunner:
                 "side": result.signal.value,
                 "entry_price": result.entry_price,
                 "quantity": quantity,
+                "leverage": leverage,
                 "stop_loss": result.stop_loss,
                 "take_profit": result.take_profit,
                 "entry_at": datetime.now(timezone.utc).isoformat(),
@@ -157,9 +228,9 @@ class ScalpingRunner:
             self._last_signal_time = time.time()
 
             logger.info(
-                "═══ #%d %s 진입 ═══ 가격=%.2f 수량=%.4f SL=%.2f TP=%.2f | %s",
+                "═══ #%d %s 진입 ═══ 가격=%g 수량=%.4f %dx SL=%g TP=%g | %s",
                 self._trade_count, result.signal.value.upper(),
-                result.entry_price, quantity,
+                result.entry_price, quantity, leverage,
                 result.stop_loss, result.take_profit,
                 result.reason,
             )
@@ -202,7 +273,7 @@ class ScalpingRunner:
 
             emoji = "+" if pnl > 0 else ""
             logger.info(
-                "═══ #%d %s 청산 (%s) ═══ 진입=%.2f → 청산=%.2f | PnL=%s%.4f USDT (%s%.2f%%)",
+                "═══ #%d %s 청산 (%s) ═══ 진입=%g → 청산=%g | PnL=%s%.4f USDT (%s%.2f%%)",
                 pos["trade_no"], pos["side"].upper(), reason,
                 pos["entry_price"], exit_price,
                 emoji, pnl, emoji, pnl_pct,
@@ -279,16 +350,45 @@ class ScalpingRunner:
                 else:
                     # 쿨다운 아니면 신호 체크
                     if not self._in_cooldown():
-                        result = detect_scalp_signal(df)
+                        result = detect_scalp_signal(
+                            df,
+                            capital=self._capital,
+                            risk_config=self._risk_config,
+                        )
+                        # EMA cross 없으면 눌림목 체크
+                        if result.signal == ScalpSignal.NONE:
+                            pb = self._detect_pullback(df)
+                            if pb is not None:
+                                result = pb
                         if result.signal != ScalpSignal.NONE:
                             self._open_position(result)
 
                 remaining = int((end_time - time.time()) / 60)
                 if int(time.time()) % 300 < self._check_interval:  # 5분마다 상태 로그
-                    pos_str = f"포지션: {self._position['side'].upper()}" if self._position else "대기 중"
+                    if self._position:
+                        pos = self._position
+                        # 미실현 PnL 계산
+                        if pos["side"] == "long":
+                            unrealized = (current_price - pos["entry_price"]) * pos["quantity"]
+                        else:
+                            unrealized = (pos["entry_price"] - current_price) * pos["quantity"]
+                        unrealized_pct = unrealized / (pos["entry_price"] * pos["quantity"]) * 100
+                        sign = "+" if unrealized > 0 else ""
+                        pos_str = (
+                            f"{pos['side'].upper()} {pos.get('leverage', self._leverage)}x "
+                            f"PnL={sign}{unrealized:.4f}({sign}{unrealized_pct:.2f}%)"
+                        )
+                    else:
+                        pos_str = "대기 중"
+
+                    # 누적 PnL
+                    realized = sum(t["pnl"] for t in self._trades)
+                    realized_str = f"실현={realized:+.4f}" if self._trades else ""
+
                     logger.info(
-                        "[상태] 가격=%.2f | %s | 거래=%d | 남은시간=%d분",
-                        current_price, pos_str, len(self._trades), remaining,
+                        "[상태] 가격=%.2f | %s | %s | 거래=%d | 남은=%d분",
+                        current_price, pos_str, realized_str,
+                        len(self._trades), remaining,
                     )
 
                 time.sleep(self._check_interval)
@@ -323,6 +423,9 @@ def main() -> None:
     parser.add_argument("--cooldown", type=int, default=300, help="쿨다운(초)")
     parser.add_argument("--interval", type=int, default=30, help="체크 간격(초)")
     parser.add_argument("--live", action="store_true", help="실제 거래 (기본: testnet)")
+    parser.add_argument("--risk-pct", type=float, default=2.0, help="거래당 리스크 (%)")
+    parser.add_argument("--lev-min", type=int, default=2, help="최소 레버리지")
+    parser.add_argument("--lev-max", type=int, default=20, help="최대 레버리지")
     args = parser.parse_args()
 
     # 환경변수 우선, 없으면 config/broker.json에서 로드
@@ -349,6 +452,12 @@ def main() -> None:
         )
         sys.exit(1)
 
+    risk_cfg = ScalpRiskConfig(
+        risk_per_trade_pct=args.risk_pct / 100,
+        leverage_min=args.lev_min,
+        leverage_max=args.lev_max,
+    )
+
     runner = ScalpingRunner(
         api_key=api_key,
         secret=secret,
@@ -358,6 +467,7 @@ def main() -> None:
         cooldown_sec=args.cooldown,
         check_interval=args.interval,
         testnet=not args.live,
+        risk_config=risk_cfg,
     )
     runner.run(duration_minutes=args.duration)
 

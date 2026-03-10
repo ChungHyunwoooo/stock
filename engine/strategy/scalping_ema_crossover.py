@@ -19,6 +19,12 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
+from engine.strategy.scalping_risk import (
+    ScalpRiskConfig,
+    ScalpRiskResult,
+    calculate_scalp_risk,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +45,8 @@ class ScalpResult:
     ema_slow: float
     rsi: float
     reason: str
+    # 동적 리스크 (calculate_scalp_risk 사용 시 채워짐)
+    risk: ScalpRiskResult | None = None
 
 
 # ── 기본 설정 ───────────────────────────────────────────────
@@ -82,15 +90,19 @@ def calc_rsi(series: pd.Series, period: int = 14) -> pd.Series:
 def detect_scalp_signal(
     df: pd.DataFrame,
     config: dict | None = None,
+    capital: float | None = None,
+    risk_config: ScalpRiskConfig | None = None,
 ) -> ScalpResult:
     """EMA Crossover + RSI 스캘핑 신호 감지.
 
     Args:
         df: OHLCV DataFrame (최소 30봉 이상)
-        config: 설정 override
+        config: 전략 설정 override
+        capital: 가용 자본 (USDT). 지정 시 동적 리스크 계산 활성화.
+        risk_config: 리스크 설정. capital 지정 시만 사용.
 
     Returns:
-        ScalpResult
+        ScalpResult (capital 지정 시 risk 필드 채워짐)
     """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
@@ -136,13 +148,32 @@ def detect_scalp_signal(
         tp = price_now * (1 - cfg["tp_pct"] / 100)
         reason = f"데드크로스 EMA{cfg['ema_fast']}/{cfg['ema_slow']} + RSI={rsi_now:.1f}"
 
+    # 동적 리스크 계산 (capital 지정 + 신호 있을 때)
+    risk_result: ScalpRiskResult | None = None
+    if signal != ScalpSignal.NONE and capital is not None:
+        risk_result = calculate_scalp_risk(
+            df=df,
+            entry_price=price_now,
+            side=signal.value,
+            capital=capital,
+            config=risk_config,
+        )
+        # 동적 SL/TP로 덮어쓰기
+        sl = risk_result.stop_loss
+        tp = risk_result.take_profit
+        reason = f"{reason} | {risk_result.reason}"
+
+    from engine.strategy.scalping_risk import _price_precision
+    prec = _price_precision(price_now)
+
     return ScalpResult(
         signal=signal,
         entry_price=price_now,
-        stop_loss=round(sl, 2),
-        take_profit=round(tp, 2),
+        stop_loss=round(sl, prec),
+        take_profit=round(tp, prec),
         ema_fast=round(ema_f_now, 2),
         ema_slow=round(ema_s_now, 2),
         rsi=round(rsi_now, 2),
         reason=reason,
+        risk=risk_result,
     )
