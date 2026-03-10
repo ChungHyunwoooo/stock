@@ -1,9 +1,7 @@
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from engine.domain.trading.models import TradingSignal
-
+from engine.core.models import TradingSignal
 
 @dataclass(frozen=True, slots=True)
 class AnalysisReport:

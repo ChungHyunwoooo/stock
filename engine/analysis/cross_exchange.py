@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-
 def _returns(s: pd.Series) -> pd.Series:
     return s.pct_change().dropna()
-
 
 def _lag_corr(a: pd.Series, b: pd.Series, lag: int) -> float:
     if lag > 0:
@@ -29,7 +27,6 @@ def _lag_corr(a: pd.Series, b: pd.Series, lag: int) -> float:
         return 0.0
     v = x.corr(y)
     return 0.0 if pd.isna(v) else float(v)
-
 
 def lead_lag_score(ref_close: pd.Series, target_close: pd.Series, max_lag: int = 5) -> dict:
     r_ref = _returns(ref_close)
@@ -61,19 +58,16 @@ def lead_lag_score(ref_close: pd.Series, target_close: pd.Series, max_lag: int =
         leader = "SYNC"
     return {"best_lag": int(best_lag), "best_corr": round(best_corr, 4), "leader": leader}
 
-
 def kimchi_premium(krw_price: float, usdt_price: float, usdkrw: float) -> float:
     if usdt_price <= 0 or usdkrw <= 0:
         return 0.0
     fair_krw = usdt_price * usdkrw
     return (krw_price / fair_krw - 1.0) * 100.0
 
-
 def execution_gap_pct(execution_price: float, reference_price: float) -> float:
     if execution_price <= 0 or reference_price <= 0:
         return 0.0
     return (execution_price / reference_price - 1.0) * 100.0
-
 
 def summarize_cross_exchange(
     krw_price: float,

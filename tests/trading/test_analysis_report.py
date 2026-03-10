@@ -1,10 +1,6 @@
-from __future__ import annotations
-
-import pandas as pd
 
 from engine.application.trading.presenters import build_analysis_report_presentation
 from engine.application.trading.reports import AnalysisReport
-
 
 def test_analysis_report_presentation_contains_summary_fields():
     report = AnalysisReport(

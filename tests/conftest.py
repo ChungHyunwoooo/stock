@@ -1,7 +1,5 @@
 """Shared pytest fixtures for all test modules."""
 
-from __future__ import annotations
-
 import sys
 from unittest.mock import MagicMock
 
@@ -31,7 +29,6 @@ from engine.schema import (
     StrategyStatus,
 )
 
-
 @pytest.fixture
 def sample_df() -> pd.DataFrame:
     """50-row OHLCV DataFrame with deterministic values."""
@@ -48,7 +45,6 @@ def sample_df() -> pd.DataFrame:
         },
         index=idx,
     )
-
 
 @pytest.fixture
 def sample_strategy() -> StrategyDefinition:

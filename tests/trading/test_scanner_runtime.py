@@ -1,13 +1,11 @@
-from __future__ import annotations
 
 from engine.application.trading import AlertRuntimeConfig, AlertScannerRuntime
-from engine.domain.trading import SignalAction, TradeSide, TradingSignal
-from engine.infrastructure.execution import PaperBroker
-from engine.infrastructure.notifications import MemoryNotifier
-from engine.infrastructure.runtime import JsonRuntimeStore
+from engine.core import SignalAction, TradeSide, TradingSignal
+from engine.execution import PaperBroker
+from engine.notifications import MemoryNotifier
+from engine.core import JsonRuntimeStore
 from engine.application.trading.orchestrator import TradingOrchestrator
-from engine.application.trading.scanner import CooldownStore
-
+from engine.application.trading.signal_scanner import CooldownStore
 
 class StubAnalysisService:
     def __init__(self) -> None:
@@ -25,7 +23,6 @@ class StubAnalysisService:
                 entry_price=100.0,
             )
         ]
-
 
 def test_scanner_runtime_emits_and_then_respects_cooldown(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")

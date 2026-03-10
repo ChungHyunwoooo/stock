@@ -1,11 +1,9 @@
-from __future__ import annotations
 
 import pandas as pd
 
 from engine.application.trading.charts import build_analysis_chart
 from engine.application.trading.reports import AnalysisReport
-from engine.domain.trading import SignalAction, TradeSide, TradingSignal
-
+from engine.core import SignalAction, TradeSide, TradingSignal
 
 def _sample_frame() -> pd.DataFrame:
     index = pd.date_range('2026-03-01', periods=60, freq='15min', tz='UTC')
@@ -20,7 +18,6 @@ def _sample_frame() -> pd.DataFrame:
         },
         index=index,
     )
-
 
 def test_build_analysis_chart_uses_first_signal_as_overlay(monkeypatch):
     signal = TradingSignal(

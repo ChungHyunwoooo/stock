@@ -1,0 +1,42 @@
+{
+  "name": "Donchian Breakout",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "Donchian 채널 상단/하단 돌파 시 방향으로 진입하는 브레이크아웃 전략. 크립토 시장 휩쏘가 잦아 지속 손실.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "DONCHIAN",
+      "params": {"timeperiod": 20},
+      "output": {"upper": "dc_upper", "middle": "dc_middle", "lower": "dc_lower"}
+    }
+  ],
+  "entry": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "dc_upper", "label": "long_breakout"},
+      {"left": "close", "op": "crosses_below", "right": "dc_lower", "label": "short_breakout"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "dc_middle", "label": "long_exit"},
+      {"left": "close", "op": "crosses_above", "right": "dc_middle", "label": "short_exit"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "적자",
+    "tags": ["donchian", "breakout", "channel", "deprecated"]
+  }
+}

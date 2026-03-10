@@ -1,0 +1,42 @@
+{
+  "name": "Keltner MR",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "Keltner 채널 이탈 후 중심선 회귀를 노리는 평균회귀 전략. 추세장에서 역추세 진입으로 큰 손실 발생.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "KELTNER",
+      "params": {"ema_period": 20, "atr_mult": 2.0},
+      "output": {"upperband": "kc_upper", "middleband": "kc_middle", "lowerband": "kc_lower"}
+    }
+  ],
+  "entry": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "kc_lower", "label": "long_entry_oversold"},
+      {"left": "close", "op": "crosses_above", "right": "kc_upper", "label": "short_entry_overbought"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "kc_middle", "label": "long_exit"},
+      {"left": "close", "op": "crosses_below", "right": "kc_middle", "label": "short_exit"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "적자",
+    "tags": ["keltner", "mean-reversion", "counter-trend", "deprecated"]
+  }
+}

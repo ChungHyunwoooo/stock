@@ -1,7 +1,5 @@
 """Tests for engine/strategy/engine.py — StrategyEngine.generate_signals."""
 
-from __future__ import annotations
-
 from unittest.mock import patch
 
 import numpy as np
@@ -17,8 +15,7 @@ from engine.schema import (
     StrategyDefinition,
     StrategyStatus,
 )
-from engine.strategy.engine import StrategyEngine
-
+from engine.strategy.strategy_evaluator import StrategyEngine
 
 @pytest.fixture
 def ohlcv_df() -> pd.DataFrame:
@@ -37,7 +34,6 @@ def ohlcv_df() -> pd.DataFrame:
         index=idx,
     )
 
-
 def _make_rsi_series(index: pd.Index, cross_above_idx: int, cross_below_idx: int) -> pd.Series:
     """Build an RSI series with deliberate crosses at given positions."""
     values = np.full(len(index), 50.0)
@@ -48,7 +44,6 @@ def _make_rsi_series(index: pd.Index, cross_above_idx: int, cross_below_idx: int
     values[cross_below_idx - 1] = 72.0
     values[cross_below_idx] = 68.0
     return pd.Series(values, index=index)
-
 
 def test_generate_signals_single_indicator(ohlcv_df):
     """generate_signals produces correct entry/exit signals with mocked RSI."""
@@ -83,7 +78,6 @@ def test_generate_signals_single_indicator(ohlcv_df):
     # Unaffected bars should be 0
     assert result["signal"].iloc[5] == 0
     assert result["signal"].iloc[15] == 0
-
 
 def test_generate_signals_risk_columns(ohlcv_df):
     """Risk management columns are added when stop/take-profit are set."""
@@ -121,7 +115,6 @@ def test_generate_signals_risk_columns(ohlcv_df):
     if len(non_entry_rows) > 0:
         assert non_entry_rows["stop_loss_price"].isna().all()
         assert non_entry_rows["take_profit_price"].isna().all()
-
 
 def test_generate_signals_multi_output_indicator(ohlcv_df):
     """generate_signals handles multi-output indicator (MACD-style dict output)."""
@@ -168,7 +161,6 @@ def test_generate_signals_multi_output_indicator(ohlcv_df):
     # macd_line crosses above signal_line (0) once as it goes from negative to positive
     entry_rows = result[result["signal"] == 1]
     assert len(entry_rows) == 1
-
 
 def test_generate_signals_no_signals(ohlcv_df):
     """When conditions are never met, all signals should be 0."""

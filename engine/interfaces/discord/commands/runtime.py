@@ -1,12 +1,10 @@
-from __future__ import annotations
 
 from discord import Interaction, app_commands
 
-from engine.domain.trading import TradingMode
+from engine.core import TradingMode
 from engine.interfaces.discord.autocomplete import mode_autocomplete
 from engine.interfaces.discord.context import DiscordBotContext
 from engine.interfaces.discord.formatting import format_runtime_state
-
 
 class RuntimeCommandPlugin:
     name = "runtime"

@@ -16,7 +16,6 @@ from engine.backtest.runner import BacktestResult
 
 matplotlib.use("Agg")
 
-
 def _equity_png_b64(result: BacktestResult) -> str:
     """Render equity curve as a base64-encoded PNG string."""
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -30,7 +29,6 @@ def _equity_png_b64(result: BacktestResult) -> str:
     plt.close(fig)
     buf.seek(0)
     return base64.b64encode(buf.read()).decode()
-
 
 def generate_summary(result: BacktestResult) -> dict:
     """Return a dict of key performance metrics.
@@ -62,7 +60,6 @@ def generate_summary(result: BacktestResult) -> dict:
     }
 
     return summary
-
 
 def generate_report(result: BacktestResult, output_path: str | None = None) -> str:
     """Generate a self-contained HTML backtest report.

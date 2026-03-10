@@ -13,20 +13,18 @@ import ccxt
 import pandas as pd
 import talib
 
-from engine.alerts.discord import Signal
+from engine.notifications.alert_discord import Signal
 
 logger = logging.getLogger(__name__)
 
 # Reuse a single exchange instance
 _exchange: ccxt.binance | None = None
 
-
 def _get_exchange() -> ccxt.binance:
     global _exchange
     if _exchange is None:
         _exchange = ccxt.binance({"options": {"defaultType": "future"}})
     return _exchange
-
 
 def fetch_funding_rate(symbol: str) -> float | None:
     """Fetch current funding rate for a symbol from Binance Futures."""
@@ -39,7 +37,6 @@ def fetch_funding_rate(symbol: str) -> float | None:
         logger.warning("Failed to fetch funding rate for %s: %s", symbol, e)
         return None
 
-
 def fetch_funding_rates(symbols: list[str]) -> dict[str, float]:
     """Fetch funding rates for multiple symbols."""
     rates: dict[str, float] = {}
@@ -48,7 +45,6 @@ def fetch_funding_rates(symbols: list[str]) -> dict[str, float]:
         if rate is not None:
             rates[sym] = rate
     return rates
-
 
 def scan_funding_rate(
     df: pd.DataFrame,
@@ -119,7 +115,6 @@ def scan_funding_rate(
 
     return None
 
-
 def fetch_funding_rates_batch(symbols: list[str]) -> dict[str, float]:
     """Binance Futures에서 모든 심볼의 펀딩비를 한번에 가져오기.
 
@@ -139,7 +134,6 @@ def fetch_funding_rates_batch(symbols: list[str]) -> dict[str, float]:
         # fallback to individual fetch
         return fetch_funding_rates(symbols)
 
-
 def is_funding_extreme(rate: float, side: str) -> bool:
     """펀딩비가 해당 방향의 극단값인지 확인.
 
@@ -152,7 +146,6 @@ def is_funding_extreme(rate: float, side: str) -> bool:
     elif side == "SHORT":
         return rate > 0.0001
     return False
-
 
 def funding_signal_strength(rate: float) -> float:
     """펀딩비 극단도를 0.0~1.0으로 정규화.

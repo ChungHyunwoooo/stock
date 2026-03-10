@@ -1,0 +1,36 @@
+{
+  "name": "Grid Trading",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "일정 간격의 가격 그리드에서 자동 매수/매도를 반복하는 전략. 거래 빈도가 높아 수수료 누적이 수익을 초과하여 폐기.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "close", "op": "lte", "right": "grid_level_buy", "label": "price_at_buy_grid"},
+      {"left": "close", "op": "gte", "right": "grid_level_sell", "label": "price_at_sell_grid"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "gte", "right": "grid_next_upper", "label": "take_profit_grid"},
+      {"left": "close", "op": "lte", "right": "grid_next_lower", "label": "stop_grid"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "수수료에 잠식",
+    "tags": ["grid", "range", "high-frequency", "deprecated"]
+  }
+}

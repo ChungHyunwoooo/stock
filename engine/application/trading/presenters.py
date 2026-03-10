@@ -1,17 +1,14 @@
-from __future__ import annotations
 
 from dataclasses import dataclass
 
 from engine.application.trading.reports import AnalysisReport
-from engine.domain.trading.models import TradingSignal
-
+from engine.core.models import TradingSignal
 
 @dataclass(frozen=True, slots=True)
 class SignalField:
     name: str
     value: str
     inline: bool = True
-
 
 @dataclass(frozen=True, slots=True)
 class SignalPresentation:
@@ -21,14 +18,12 @@ class SignalPresentation:
     footer: str
     description: str = ""
 
-
 @dataclass(frozen=True, slots=True)
 class ReportPresentation:
     title: str
     color: int
     fields: list[SignalField]
     footer: str
-
 
 _STRAT_NAMES = {
     "UPBIT_EMA_RSI_VWAP": "EMA+RSI+VWAP",
@@ -46,7 +41,6 @@ _STRAT_NAMES = {
     "UPBIT_TOMMY_BB_RSI": "Tommy BB+RSI \uac15\ud654",
 }
 
-
 def _fmt_price(p: float) -> str:
     if p >= 1000:
         return f"{p:,.0f}"
@@ -58,7 +52,6 @@ def _fmt_price(p: float) -> str:
         return f"{p:,.3f}"
     else:
         return f"{p:,.4f}"
-
 
 def build_signal_presentation(signal: TradingSignal, mode_label: str) -> SignalPresentation:
     """scan alert(send_upbit_alert) 포맷과 통일된 시그널 프레젠테이션."""
@@ -158,7 +151,6 @@ def build_signal_presentation(signal: TradingSignal, mode_label: str) -> SignalP
         footer=" | ".join(p for p in footer_parts if p),
         description=description,
     )
-
 
 def build_analysis_report_presentation(report: AnalysisReport) -> ReportPresentation:
     trend_emoji = {"BULLISH": "\U0001f7e2", "BEARISH": "\U0001f534"}.get(report.trend_bias, "\u26aa")

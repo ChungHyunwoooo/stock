@@ -1,0 +1,48 @@
+{
+  "name": "BB Squeeze",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "볼린저 밴드가 Keltner 채널 내부로 수축(스퀴즈) 후 확장 시 돌파 방향으로 진입. BULL/BEAR/RANGE 전 레짐에서 손실, 방향 필터 적용해도 개선 없음.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "BBANDS",
+      "params": {"timeperiod": 20, "nbdevup": 2, "nbdevdn": 2},
+      "output": {"upperband": "bb_upper", "middleband": "bb_middle", "lowerband": "bb_lower"}
+    },
+    {
+      "name": "KELTNER",
+      "params": {"ema_period": 20, "atr_mult": 1.5},
+      "output": {"upperband": "kc_upper", "middleband": "kc_middle", "lowerband": "kc_lower"}
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "bb_upper", "op": "lt", "right": "kc_upper", "label": "squeeze_active"},
+      {"left": "bb_lower", "op": "gt", "right": "kc_lower", "label": "squeeze_active"},
+      {"left": "close", "op": "crosses_above", "right": "bb_upper", "label": "long_breakout"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "bb_middle"},
+      {"left": "close", "op": "crosses_above", "right": "kc_upper"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "전 구간 적자, WR 34%",
+    "tags": ["bollinger-bands", "keltner", "squeeze", "breakout", "deprecated"]
+  }
+}

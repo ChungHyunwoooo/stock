@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -6,14 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from api.deps import get_db
+from api.dependencies import get_db
 from engine.schema import StrategyDefinition
-from engine.store.models import StrategyRecord
-from engine.store.repository import StrategyRepository
+from engine.core.db_models import StrategyRecord
+from engine.core.repository import StrategyRepository
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 _repo = StrategyRepository()
-
 
 class StrategyResponse(BaseModel):
     id: int
@@ -38,10 +38,8 @@ class StrategyResponse(BaseModel):
             updated_at=str(r.updated_at)[:19] if r.updated_at else None,
         )
 
-
 class StatusUpdate(BaseModel):
     status: str
-
 
 @router.get("", response_model=list[StrategyResponse])
 def list_strategies(
@@ -51,7 +49,6 @@ def list_strategies(
     records = _repo.list_all(db, status=status)
     return [StrategyResponse.from_record(r) for r in records]
 
-
 @router.post("", response_model=StrategyResponse, status_code=201)
 def create_strategy(
     body: StrategyDefinition,
@@ -59,7 +56,6 @@ def create_strategy(
 ) -> StrategyResponse:
     record = _repo.save(db, body)
     return StrategyResponse.from_record(record)
-
 
 @router.get("/{strategy_id}", response_model=StrategyResponse)
 def get_strategy(
@@ -70,7 +66,6 @@ def get_strategy(
     if record is None:
         raise HTTPException(status_code=404, detail="Strategy not found")
     return StrategyResponse.from_record(record)
-
 
 @router.patch("/{strategy_id}/status", response_model=StrategyResponse)
 def update_status(
@@ -84,7 +79,6 @@ def update_status(
     _repo.update_status(db, strategy_id, body.status)
     record = _repo.get(db, strategy_id)
     return StrategyResponse.from_record(record)  # type: ignore[arg-type]
-
 
 @router.delete("/{strategy_id}", status_code=204)
 def delete_strategy(

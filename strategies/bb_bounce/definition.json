@@ -1,0 +1,42 @@
+{
+  "name": "BB Bounce",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "볼린저 밴드 하단 터치 후 반등 시 LONG 진입. SL 로직 버그가 있었고 수정 후 WR 급락하여 실전 불가 판정.",
+  "markets": ["crypto_futures"],
+  "direction": "long",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "BBANDS",
+      "params": {"timeperiod": 20, "nbdevup": 2, "nbdevdn": 2},
+      "output": {"upperband": "bb_upper", "middleband": "bb_middle", "lowerband": "bb_lower"}
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "low", "op": "lte", "right": "bb_lower", "label": "touches_lower_band"},
+      {"left": "close", "op": "gt", "right": "bb_lower", "label": "bounce_confirmed"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "bb_middle"},
+      {"left": "close", "op": "crosses_above", "right": "bb_upper"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "SL 버그 수정 후 전멸",
+    "tags": ["bollinger-bands", "bounce", "mean-reversion", "long-only", "deprecated"]
+  }
+}

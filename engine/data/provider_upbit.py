@@ -5,14 +5,13 @@ pyupbit를 직접 사용하여 DataProvider 인터페이스를 구현.
 
 심볼 변환: "BTC/KRW" → "KRW-BTC" (pyupbit 형식)
 """
-from __future__ import annotations
 
 import logging
 
 import pandas as pd
 
-from engine.data.base import DataProvider
-from engine.data.upbit_cache import OHLCVCacheManager, INTERVAL_MAP
+from engine.data.provider_base import DataProvider
+from engine.data.upbit_cache import OHLCVCacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,6 @@ _BARS_PER_DAY = {
     "1w": 1 / 7,
 }
 
-
 def _to_upbit_symbol(symbol: str) -> str:
     """BTC/KRW → KRW-BTC 변환."""
     if "/" not in symbol:
@@ -35,14 +33,12 @@ def _to_upbit_symbol(symbol: str) -> str:
     base, quote = symbol.split("/", 1)
     return f"{quote}-{base}"
 
-
 def _from_upbit_symbol(upbit_symbol: str) -> str:
     """KRW-BTC → BTC/KRW 변환."""
     if "-" not in upbit_symbol:
         return upbit_symbol
     quote, base = upbit_symbol.split("-", 1)
     return f"{base}/{quote}"
-
 
 class UpbitProvider(DataProvider):
     """pyupbit 기반 Upbit 데이터 프로바이더."""

@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import json
@@ -6,10 +7,9 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from engine.backtest.metrics import compute_max_drawdown, compute_sharpe_ratio, compute_total_return
-from engine.data.base import get_provider
+from engine.data.provider_base import get_provider
 from engine.schema import StrategyDefinition
-from engine.strategy.engine import StrategyEngine
-
+from engine.strategy.strategy_evaluator import StrategyEngine
 
 @dataclass
 class TradeRecord:
@@ -18,7 +18,6 @@ class TradeRecord:
     entry_price: float
     exit_price: float
     pnl_pct: float
-
 
 @dataclass
 class BacktestResult:
@@ -56,7 +55,6 @@ class BacktestResult:
                 "trades": trades_data,
             }
         )
-
 
 class BacktestRunner:
     """Runs a strategy definition against historical OHLCV data."""
@@ -104,7 +102,7 @@ class BacktestRunner:
         # Regime exposure overlay
         exposure_series = None
         if regime_enabled and market_type in ("crypto_spot", "crypto_futures"):
-            from engine.regime.crypto import CryptoRegimeEngine
+            from engine.analysis.crypto_regime import CryptoRegimeEngine
             regime_engine = CryptoRegimeEngine()
             regime_df = regime_engine.evaluate_series(start, end, timeframe)
             if not regime_df.empty:

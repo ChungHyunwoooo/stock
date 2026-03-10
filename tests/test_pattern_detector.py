@@ -9,7 +9,6 @@
   - detect_asc_triangle / detect_desc_triangle: 삼각형
   - scan_patterns: 통합 스캔 + 방향 필터
 """
-from __future__ import annotations
 
 import numpy as np
 import pytest
@@ -33,9 +32,7 @@ from engine.strategy.pattern_detector import (
     scan_patterns,
 )
 
-
 # ── 헬퍼 ────────────────────────────────────────────────────
-
 
 def _make_v_shape(n: int = 100, low_idx: int = 50, amplitude: float = 10.0,
                   base: float = 100.0) -> np.ndarray:
@@ -44,7 +41,6 @@ def _make_v_shape(n: int = 100, low_idx: int = 50, amplitude: float = 10.0,
     for i in range(n):
         arr[i] = base - amplitude * (1 - abs(i - low_idx) / max(low_idx, n - low_idx))
     return arr
-
 
 def _make_double_bottom_ohlcv(
     n: int = 80, m1: int = 20, m2: int = 45, neckline_idx: int = 33,
@@ -73,9 +69,7 @@ def _make_double_bottom_ohlcv(
 
     return close, high, low
 
-
 # ── find_local_extrema ───────────────────────────────────────
-
 
 class TestFindLocalExtrema:
     def test_simple_v_shape(self):
@@ -110,9 +104,7 @@ class TestFindLocalExtrema:
         mins, _ = find_local_extrema(arr, order=5)
         assert 0 not in mins
 
-
 # ── confirmed_before ─────────────────────────────────────────
-
 
 class TestConfirmedBefore:
     def test_filters_future_indices(self):
@@ -133,9 +125,7 @@ class TestConfirmedBefore:
     def test_empty_input(self):
         assert confirmed_before([], current=50) == []
 
-
 # ── SR 헬퍼 ──────────────────────────────────────────────────
-
 
 class TestSRHelpers:
     def test_find_next_resistance(self):
@@ -190,9 +180,7 @@ class TestSRHelpers:
         tp = _calc_short_tp(95.0, 100.0, low, low_mins, i=15)
         assert tp == pytest.approx(95.0 - _TP_FALLBACK_RATIO * 5.0)
 
-
 # ── Double Bottom ────────────────────────────────────────────
-
 
 class TestDoubleBottom:
     def test_detect_valid(self):
@@ -244,9 +232,7 @@ class TestDoubleBottom:
             min_low = min(sig.metadata["low1"], sig.metadata["low2"])
             assert sig.stop_loss == pytest.approx(min_low * (1 - _SL_MARGIN))
 
-
 # ── Double Top ───────────────────────────────────────────────
-
 
 class TestDoubleTop:
     def _make_double_top_ohlcv(self, n=80, m1=20, m2=45, close_val=88.0):
@@ -284,9 +270,7 @@ class TestDoubleTop:
         sig = detect_double_top(close, high, low, len(close) - 1, high_maxs, low_mins)
         assert sig is None
 
-
 # ── Ascending Triangle ───────────────────────────────────────
-
 
 class TestAscTriangle:
     def _make_asc_triangle(self, n=80):
@@ -329,9 +313,7 @@ class TestAscTriangle:
         sig = detect_asc_triangle(close, high, low, len(close) - 1, low_mins, high_maxs)
         assert sig is None
 
-
 # ── Descending Triangle ──────────────────────────────────────
-
 
 class TestDescTriangle:
     def _make_desc_triangle(self, n=80):
@@ -373,9 +355,7 @@ class TestDescTriangle:
         sig = detect_desc_triangle(close, high, low, len(close) - 1, low_mins, high_maxs)
         assert sig is None
 
-
 # ── scan_patterns (방향 필터) ────────────────────────────────
-
 
 class TestScanPatterns:
     def test_long_direction_excludes_short_patterns(self):
@@ -406,9 +386,7 @@ class TestScanPatterns:
         )
         assert isinstance(results, list)
 
-
 # ── PatternSignal 데이터 무결성 ──────────────────────────────
-
 
 class TestPatternSignalIntegrity:
     def test_dataclass_fields(self):

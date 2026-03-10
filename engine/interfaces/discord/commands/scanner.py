@@ -8,6 +8,7 @@
   /순위         — Upbit 거래대금 상위 20개
   /설정         — 스캐너 설정 변경
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,7 +21,6 @@ from discord import Interaction, app_commands
 from engine.interfaces.discord.context import DiscordBotContext
 
 logger = logging.getLogger(__name__)
-
 
 class ScannerCommandPlugin:
     name = "scanner"
@@ -233,7 +233,6 @@ class ScannerCommandPlugin:
             changes = ", ".join(f"{k}={v}" for k, v in kwargs.items())
             await interaction.response.send_message(f"설정 변경: {changes}")
 
-
 _PATTERN_HELP = {
     # 구조적 패턴 (우리 전략)
     "쌍바닥 (Double Bottom)": "저점 2개가 유사 → 넥라인 돌파 시 LONG. 상승 반전 신호.",
@@ -275,7 +274,6 @@ _TERM_HELP = {
     "pred_multi": "3개 지표 투표: Momentum + EMA Cross + Structure. 2개 이상 동의 시 방향 결정.",
 }
 
-
 def _normalize_symbol(raw: str) -> str:
     """사용자 입력 → 표준 심볼 형태.
 
@@ -291,7 +289,6 @@ def _normalize_symbol(raw: str) -> str:
         return f"{base}/KRW"
     # 기본: Upbit KRW 마켓
     return f"{raw}/KRW"
-
 
 def _split_message(text: str, limit: int = 1900) -> list[str]:
     """디스코드 2000자 제한 분할."""

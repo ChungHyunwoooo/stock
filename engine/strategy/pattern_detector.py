@@ -13,12 +13,12 @@ SL/TP: 지지·저항 기반 (고정 비율 아님)
 look-ahead 방지:
   극값 k를 사용하려면 k + order < current_bar 이어야 함.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 import numpy as np
-
 
 @dataclass(slots=True)
 class PatternSignal:
@@ -29,7 +29,6 @@ class PatternSignal:
     take_profit: float
     bar_index: int
     metadata: dict
-
 
 # ---------------------------------------------------------------------------
 # 로컬 극값 탐지 (전체 배열 1회 계산)
@@ -48,13 +47,11 @@ def find_local_extrema(arr: np.ndarray, order: int = 5) -> tuple[list[int], list
             maxs.append(k)
     return mins, maxs
 
-
 def confirmed_before(indices: list[int], current: int,
                      lookback: int = 50, order: int = 5) -> list[int]:
     """look-ahead 방지: k + order < current 이고 lookback 범위 내."""
     cutoff = current - lookback
     return [k for k in indices if cutoff <= k and k + order < current]
-
 
 # ---------------------------------------------------------------------------
 # 지지·저항 기반 SL/TP 헬퍼
@@ -64,7 +61,6 @@ _MIN_PEAK_SEPARATION = 10  # 두 극값 사이 최소 봉 수
 _SL_MARGIN = 0.002  # SL 마진 (0.2%)
 _MIN_RR = 1.0  # 최소 R:R — 이보다 낮은 레벨은 스킵
 _TP_FALLBACK_RATIO = 2.0  # 적절한 레벨 없을 때 폴백 R:R
-
 
 def _find_next_resistance(price: float, sl_dist: float, high: np.ndarray,
                           high_maxs: list[int], i: int, order: int = 5) -> float | None:
@@ -77,7 +73,6 @@ def _find_next_resistance(price: float, sl_dist: float, high: np.ndarray,
             return lv
     return None
 
-
 def _find_next_support(price: float, sl_dist: float, low: np.ndarray,
                        low_mins: list[int], i: int, order: int = 5) -> float | None:
     """현재가 아래 지지선 중 R:R >= 1인 첫 번째 레벨."""
@@ -89,7 +84,6 @@ def _find_next_support(price: float, sl_dist: float, low: np.ndarray,
             return lv
     return None
 
-
 def _calc_long_tp(entry: float, sl: float, high: np.ndarray,
                   high_maxs: list[int], i: int) -> float:
     """LONG TP: R:R >= 1인 저항 → 없으면 폴백."""
@@ -99,7 +93,6 @@ def _calc_long_tp(entry: float, sl: float, high: np.ndarray,
         return resistance
     return entry + _TP_FALLBACK_RATIO * sl_dist
 
-
 def _calc_short_tp(entry: float, sl: float, low: np.ndarray,
                    low_mins: list[int], i: int) -> float:
     """SHORT TP: R:R >= 1인 지지 → 없으면 폴백."""
@@ -108,7 +101,6 @@ def _calc_short_tp(entry: float, sl: float, low: np.ndarray,
     if support:
         return support
     return entry - _TP_FALLBACK_RATIO * sl_dist
-
 
 # ---------------------------------------------------------------------------
 # 패턴 1: Double Bottom (LONG)
@@ -160,7 +152,6 @@ def detect_double_bottom(
                   "m1_idx": m1, "m2_idx": m2},
     )
 
-
 # ---------------------------------------------------------------------------
 # 패턴 2: Double Top (SHORT)
 # ---------------------------------------------------------------------------
@@ -210,7 +201,6 @@ def detect_double_top(
                   "m1_idx": m1, "m2_idx": m2},
     )
 
-
 # ---------------------------------------------------------------------------
 # 패턴 3: Ascending Triangle (LONG)
 # ---------------------------------------------------------------------------
@@ -256,7 +246,6 @@ def detect_asc_triangle(
         metadata={"resistance": resistance, "lows": lows_at_mins},
     )
 
-
 # ---------------------------------------------------------------------------
 # 패턴 4: Descending Triangle (SHORT)
 # ---------------------------------------------------------------------------
@@ -301,7 +290,6 @@ def detect_desc_triangle(
         bar_index=i,
         metadata={"support": support, "highs": highs_at_maxs},
     )
-
 
 # ---------------------------------------------------------------------------
 # 통합 스캔

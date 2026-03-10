@@ -1,0 +1,42 @@
+{
+  "name": "RSI + S/R",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "RSI 과매수/과매도 신호와 지지/저항 레벨 조합 전략. 단독 사용 시 신호 품질이 낮아 지속 손실.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "RSI",
+      "params": {"timeperiod": 14},
+      "output": "rsi_14"
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "rsi_14", "op": "lt", "right": 30, "label": "rsi_oversold"},
+      {"left": "close", "op": "near", "right": "support_level", "label": "at_support"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "rsi_14", "op": "gt", "right": 70, "label": "rsi_overbought"},
+      {"left": "close", "op": "near", "right": "resistance_level", "label": "at_resistance"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "적자",
+    "tags": ["rsi", "support-resistance", "oscillator", "deprecated"]
+  }
+}

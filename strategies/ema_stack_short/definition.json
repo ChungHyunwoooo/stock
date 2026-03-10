@@ -1,0 +1,59 @@
+{
+  "name": "EMA Stack SHORT",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "EMA 역배열(데스크로스 스택) 시 SHORT 진입 전략. BEAR 레짐에서도 단기 반등에 취약하여 손실 지속.",
+  "markets": ["crypto_futures"],
+  "direction": "short",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "EMA",
+      "params": {"timeperiod": 5},
+      "output": "ema_5"
+    },
+    {
+      "name": "EMA",
+      "params": {"timeperiod": 10},
+      "output": "ema_10"
+    },
+    {
+      "name": "EMA",
+      "params": {"timeperiod": 21},
+      "output": "ema_21"
+    },
+    {
+      "name": "EMA",
+      "params": {"timeperiod": 55},
+      "output": "ema_55"
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "ema_5", "op": "lt", "right": "ema_10", "label": "ema5_below_ema10"},
+      {"left": "ema_10", "op": "lt", "right": "ema_21", "label": "ema10_below_ema21"},
+      {"left": "ema_21", "op": "lt", "right": "ema_55", "label": "ema21_below_ema55"},
+      {"left": "close", "op": "lt", "right": "ema_5", "label": "price_below_stack"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_above", "right": "ema_21", "label": "short_exit"},
+      {"left": "ema_5", "op": "crosses_above", "right": "ema_10", "label": "death_cross_broken"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "BEAR에서 적자",
+    "tags": ["ema", "stack", "death-cross", "short-only", "deprecated"]
+  }
+}

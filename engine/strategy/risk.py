@@ -1,11 +1,8 @@
 """Risk management calculations for position sizing and stop/take-profit levels."""
 
-from __future__ import annotations
-
 import pandas as pd
 
 from engine.schema import RiskParams
-
 
 def calculate_position_size(
     capital: float,
@@ -29,7 +26,6 @@ def calculate_position_size(
     if price_diff == 0:
         return 0.0
     return risk_amount / price_diff
-
 
 def apply_risk_management(
     df: pd.DataFrame,

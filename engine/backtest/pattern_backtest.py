@@ -18,10 +18,8 @@ Look-ahead 방지:
   TP: R:R 비율 적용
   시간제한: 30봉
 """
-from __future__ import annotations
 
 import numpy as np
-import talib
 
 from engine.backtest.strategy_base import (
     StrategyResult,
@@ -31,7 +29,6 @@ from engine.backtest.strategy_base import (
     get_start_idx,
     load_ohlcv,
 )
-
 
 # ---------------------------------------------------------------------------
 # 로컬 극값 탐지 (전체 배열 1회 계산, O(n))
@@ -54,11 +51,9 @@ def _find_local_extrema(arr: np.ndarray, order: int = 5) -> tuple[list[int], lis
             maxs.append(k)
     return mins, maxs
 
-
 def _confirmed_before(indices: list[int], current_i: int, lookback: int, order: int) -> list[int]:
     """현재 봉 기준으로 확정된 극값만 필터. k + order <= current_i - 1."""
     return [m for m in indices if current_i - lookback <= m <= current_i - order - 1]
-
 
 # ---------------------------------------------------------------------------
 # 패턴 1: Double Bottom (LONG)
@@ -171,7 +166,6 @@ def run_double_bottom_backtest(
 
     return _build_result("DOUBLE_BOTTOM", symbol, timeframe, start, end, trades)
 
-
 # ---------------------------------------------------------------------------
 # 패턴 2: Double Top (SHORT)
 # ---------------------------------------------------------------------------
@@ -281,7 +275,6 @@ def run_double_top_backtest(
         ))
 
     return _build_result("DOUBLE_TOP", symbol, timeframe, start, end, trades)
-
 
 # ---------------------------------------------------------------------------
 # 패턴 3: Bull Flag (LONG)
@@ -402,7 +395,6 @@ def run_bull_flag_backtest(
 
     return _build_result("BULL_FLAG", symbol, timeframe, start, end, trades)
 
-
 # ---------------------------------------------------------------------------
 # 패턴 4: Bear Flag (SHORT)
 # ---------------------------------------------------------------------------
@@ -522,7 +514,6 @@ def run_bear_flag_backtest(
 
     return _build_result("BEAR_FLAG", symbol, timeframe, start, end, trades)
 
-
 # ---------------------------------------------------------------------------
 # 패턴 5: Ascending Triangle (LONG)
 # ---------------------------------------------------------------------------
@@ -634,7 +625,6 @@ def run_asc_triangle_backtest(
 
     return _build_result("ASC_TRIANGLE", symbol, timeframe, start, end, trades)
 
-
 # ---------------------------------------------------------------------------
 # 패턴 6: Descending Triangle (SHORT)
 # ---------------------------------------------------------------------------
@@ -745,7 +735,6 @@ def run_desc_triangle_backtest(
         ))
 
     return _build_result("DESC_TRIANGLE", symbol, timeframe, start, end, trades)
-
 
 # ---------------------------------------------------------------------------
 # 공통

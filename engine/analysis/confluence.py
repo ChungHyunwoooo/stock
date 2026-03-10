@@ -12,10 +12,10 @@
 점수 2+ → EXECUTE (72-77% WR 목표)
 점수 0-1 → NO TRADE
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
-
 
 def calc_confluence_score(
     funding_rate: float | None,

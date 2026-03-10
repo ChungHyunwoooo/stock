@@ -3,7 +3,6 @@
 24시간 거래대금 기준 상위 N개 심볼을 반환.
 USDT, 스테이블코인 등 분석 부적합 종목 자동 제외.
 """
-from __future__ import annotations
 
 import logging
 import time
@@ -23,7 +22,6 @@ _EXCLUDE = {"KRW-USDT", "KRW-USDC", "KRW-DAI", "KRW-TUSD", "KRW-WBTC", "KRW-WETH
 # 캐시 (TTL 5분)
 _cache: dict[str, Any] = {"data": [], "ts": 0.0}
 _CACHE_TTL = int(_os.environ.get("UPBIT_RANKING_CACHE_TTL", "300"))
-
 
 def fetch_top_krw(count: int = 20, min_volume_krw: float = 5e8) -> list[dict]:
     """Upbit KRW 마켓 거래대금 상위 N개 조회.
@@ -99,16 +97,13 @@ def fetch_top_krw(count: int = 20, min_volume_krw: float = 5e8) -> list[dict]:
             return _cache["data"][:count]
         return []
 
-
 def get_top_symbols(count: int = 20) -> list[str]:
     """상위 N개 심볼명만 반환. (e.g. ["BTC/KRW", "ETH/KRW", ...])"""
     return [r["symbol"] for r in fetch_top_krw(count)]
 
-
 def get_top_markets(count: int = 20) -> list[str]:
     """상위 N개 Upbit 마켓코드 반환. (e.g. ["KRW-BTC", "KRW-ETH", ...])"""
     return [r["market"] for r in fetch_top_krw(count)]
-
 
 def format_ranking_table(count: int = 20) -> str:
     """디스코드용 순위 테이블 문자열."""

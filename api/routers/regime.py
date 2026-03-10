@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/regime", tags=["regime"])
 
-
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------
@@ -19,7 +18,6 @@ class BtcScoreDetailResponse(BaseModel):
     rsi_bullish: bool
     macd_bullish: bool
     score: int
-
 
 class RegimeResponse(BaseModel):
     regime: str
@@ -33,7 +31,6 @@ class RegimeResponse(BaseModel):
     alt_basket_return_20d: float
     date: str
 
-
 class RegimeHistoryItem(BaseModel):
     date: str
     regime: str
@@ -42,17 +39,14 @@ class RegimeHistoryItem(BaseModel):
     dominance_dir: str
     btc_score: int
 
-
 class RegimeHistoryResponse(BaseModel):
     items: list[RegimeHistoryItem]
     total: int
-
 
 class SymbolStrengthResponse(BaseModel):
     symbol: str
     return_pct: float
     sector: str
-
 
 class SectorRankResponse(BaseModel):
     sector: str
@@ -60,11 +54,9 @@ class SectorRankResponse(BaseModel):
     rank: int
     symbols: list[SymbolStrengthResponse]
 
-
 class SectorsResponse(BaseModel):
     rankings: list[SectorRankResponse]
     top_symbols: list[SymbolStrengthResponse]
-
 
 class OHLCVBar(BaseModel):
     time: str
@@ -74,7 +66,6 @@ class OHLCVBar(BaseModel):
     close: float
     volume: float
 
-
 class CustomIndicatorBar(BaseModel):
     time: str
     watermelon_shell: float
@@ -82,7 +73,6 @@ class CustomIndicatorBar(BaseModel):
     staircase: float
     proximity1: bool
     proximity2: bool
-
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -93,7 +83,7 @@ def get_current_regime(
     date: str | None = Query(None, description="Evaluation date YYYY-MM-DD (default: today)"),
 ) -> RegimeResponse:
     """Get the current crypto macro regime state."""
-    from engine.regime.crypto import CryptoRegimeEngine
+    from engine.analysis.crypto_regime import CryptoRegimeEngine
 
     engine = CryptoRegimeEngine()
     state = engine.evaluate(date)
@@ -118,14 +108,13 @@ def get_current_regime(
         date=state.date,
     )
 
-
 @router.get("/crypto/history", response_model=RegimeHistoryResponse)
 def get_regime_history(
     start: str = Query(..., description="Start date YYYY-MM-DD"),
     end: str = Query(..., description="End date YYYY-MM-DD"),
 ) -> RegimeHistoryResponse:
     """Get regime history for a date range (for charting)."""
-    from engine.regime.crypto import CryptoRegimeEngine
+    from engine.analysis.crypto_regime import CryptoRegimeEngine
 
     engine = CryptoRegimeEngine()
     df = engine.evaluate_series(start, end)
@@ -144,7 +133,6 @@ def get_regime_history(
 
     return RegimeHistoryResponse(items=items, total=len(items))
 
-
 @router.get("/sectors", response_model=SectorsResponse)
 def get_sector_rankings(
     date: str | None = Query(None, description="Evaluation date YYYY-MM-DD (default: today)"),
@@ -153,7 +141,7 @@ def get_sector_rankings(
     top_n_per_sector: int = Query(3, ge=1, le=10),
 ) -> SectorsResponse:
     """Get sector rankings and top symbols by relative strength."""
-    from engine.regime.sector import CryptoSectorRanker
+    from engine.analysis.sector_regime import CryptoSectorRanker
 
     ranker = CryptoSectorRanker()
     rankings = ranker.rank_sectors(date, period)
@@ -186,7 +174,6 @@ def get_sector_rankings(
         ],
     )
 
-
 @router.get("/chart", response_model=list[OHLCVBar])
 def get_symbol_chart(
     symbol: str = Query(..., description="Symbol e.g. ETH/USDT"),
@@ -216,7 +203,6 @@ def get_symbol_chart(
         )
         for idx, row in df.iterrows()
     ]
-
 
 @router.get("/indicators", response_model=list[CustomIndicatorBar])
 def get_custom_indicators(

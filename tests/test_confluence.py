@@ -1,11 +1,8 @@
 """Tests for confluence scoring system and related modules."""
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 import pytest
-
 
 @pytest.fixture
 def ohlcv_100() -> pd.DataFrame:
@@ -26,17 +23,16 @@ def ohlcv_100() -> pd.DataFrame:
         index=idx,
     )
 
-
 class TestVPVR:
     def test_calc_vpvr_returns_all_keys(self, ohlcv_100):
-        from engine.analysis.volume_profile import calc_vpvr
+        from engine.patterns.volume_profile import calc_vpvr
 
         result = calc_vpvr(ohlcv_100)
         expected_keys = {"poc", "vah", "val", "at_poc", "at_vah", "at_val", "in_value_area", "at_hvn", "at_lvn"}
         assert expected_keys.issubset(result.keys())
 
     def test_vpvr_poc_within_price_range(self, ohlcv_100):
-        from engine.analysis.volume_profile import calc_vpvr
+        from engine.patterns.volume_profile import calc_vpvr
 
         result = calc_vpvr(ohlcv_100)
         low = float(ohlcv_100["low"].min())
@@ -44,13 +40,13 @@ class TestVPVR:
         assert low <= result["poc"] <= high
 
     def test_vpvr_vah_above_val(self, ohlcv_100):
-        from engine.analysis.volume_profile import calc_vpvr
+        from engine.patterns.volume_profile import calc_vpvr
 
         result = calc_vpvr(ohlcv_100)
         assert result["vah"] >= result["val"]
 
     def test_vpvr_short_df(self):
-        from engine.analysis.volume_profile import calc_vpvr
+        from engine.patterns.volume_profile import calc_vpvr
 
         df = pd.DataFrame(
             {"open": [1], "high": [2], "low": [0.5], "close": [1.5], "volume": [100.0]},
@@ -60,12 +56,11 @@ class TestVPVR:
         assert result["poc"] == 0.0
 
     def test_volume_profile_includes_vpvr(self, ohlcv_100):
-        from engine.analysis.volume_profile import calc_volume_profile
+        from engine.patterns.volume_profile import calc_volume_profile
 
         result = calc_volume_profile(ohlcv_100)
         assert "vpvr" in result
         assert "poc" in result["vpvr"]
-
 
 class TestConfluenceScore:
     def test_max_score(self):
@@ -156,7 +151,6 @@ class TestConfluenceScore:
         )
         assert result["funding_point"] is False
 
-
 class TestMTFConfluence:
     def _make_trending_df(self, n: int, direction: str) -> pd.DataFrame:
         idx = pd.date_range("2024-01-01", periods=n, freq="1h")
@@ -206,7 +200,6 @@ class TestMTFConfluence:
         result = calc_mtf_confluence({}, "LONG")
         assert result["score"] == 0.0
         assert result["aligned_count"] == 0
-
 
 class TestFundingRate:
     def test_is_funding_extreme_long(self):

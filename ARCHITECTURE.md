@@ -1,7 +1,23 @@
-# Architecture — 모듈 책임 맵
+# Architecture
 
-> 새 전략/기능 추가 시 반드시 이 문서를 먼저 읽고, 해당 모듈에 추가할 것.
 > 새 파일 생성 전 기존 모듈로 해결 가능한지 확인 필수.
+
+---
+
+## 데이터 흐름 (3계층)
+
+```
+OHLCV → indicator → pattern → signal → alert → order
+(원시)   (수치)     (구조)    (판단)   (알림)   (주문)
+```
+
+```
+[indicators/]  수치 계산 (RSI=45.2, EMA=50000)
+      ↓
+[patterns/]    구조 인식 (쌍바닥, HH/HL, 캔들 패턴)
+      ↓
+[analysis/]    방향 판단 (BULL/BEAR/NEUTRAL + 신뢰도)
+```
 
 ---
 
@@ -16,179 +32,141 @@
 
 ---
 
-## 모듈 책임
+## 디렉토리 역할
 
-### engine/strategy/ — 전략 핵심 (새 전략은 여기에만 추가)
-
-| 파일 | 책임 | 수정 시점 |
-|------|------|----------|
-| `pattern_detector.py` | 차트 패턴 감지 (쌍바닥/쌍봉/삼각형) + SR 기반 SL/TP | 새 차트 패턴 추가 시 |
-| `pullback_detector.py` | EMA 눌림목 패턴 감지 | 눌림목 로직 변경 시 |
-| `candle_patterns.py` | TA-Lib 캔들 패턴 (21종) 스캔 + 방향 편향 | 캔들 패턴 추가/제거 시 |
-| `pattern_alert.py` | 스캐너 오케스트레이터 (분석→메시지→전송) | UI/전송 로직 변경 시 |
-| `pattern_scanner.py` | 실시간 스캐너 (pred_multi + 패턴 + 오케스트레이터 연동) | 실시간 매매 로직 변경 시 |
-| `risk_manager.py` | 리스크 관리 (동시포지션/일일손실/쿨다운) | 리스크 룰 변경 시 |
-| `watermelon_filter.py` | 수박지표 보조 신호 (LONG 확신도 부스트) | 보조 지표 추가 시 |
-| `detector_registry.py` | 감지기 스펙 등록/로드 (JSON 기반) | 감지기 설정 구조 변경 시 |
-| `condition.py` | 조건식 평가 엔진 (JSON 전략 정의용) | 조건 문법 확장 시 |
-| `engine.py` | 전략 실행 엔진 (StrategyDefinition → 시그널) | 전략 스키마 변경 시 |
-| `alert_v2.py` | 거래소 간 비교 알림 (Binance/OKX/Bybit) | 멀티거래소 알림 변경 시 |
-| `scheduler.py` | 봇 스케줄러 (포지션 추적 + 알림 전송) | 스케줄링 로직 변경 시 |
-| `risk.py` | 리스크 계산 유틸 (SL/TP 비율) | SL/TP 계산식 변경 시 |
-
-### engine/data/ — 데이터 조달
-
-| 파일 | 책임 |
+| 경로 | 역할 |
 |------|------|
-| `base.py` | DataProvider 팩토리 (`get_provider()`) |
-| `provider_upbit.py` | Upbit REST API (pyupbit, 역방향 페이징, rate limit) |
-| `provider_crypto.py` | Binance/OKX/Bybit (ccxt) |
-| `provider_fdr.py` | 한국 주식 (FinanceDataReader) |
-| `upbit_cache.py` | 실시간 캐시 (닫힌 봉 캐시 + 현재 봉 갱신) |
-| `upbit_ranking.py` | Upbit KRW 상위 N 코인 (거래량 기준, 5분 캐시) |
-| `upbit_ws.py` | Upbit WebSocket (실시간 체결) |
-| `cache.py` | 범용 OHLCV 캐시 |
+| `engine/core/` | 도메인 모델 + DB + 저장소 (models, ports, repository) |
+| `engine/data/` | 데이터 수급 (provider, cache, websocket) |
+| `engine/indicators/` | 수치 계산 (price, momentum, volume, custom) |
+| `engine/patterns/` | 구조 인식 (차트패턴, 캔들, 시장구조, 지지저항) |
+| `engine/analysis/` | 방향 판단 + 신호 종합 (direction, confluence, regime) |
+| `engine/strategy/` | 전략 룰 (detector, evaluator, risk, plugin) |
+| `engine/execution/` | 주문 실행 (paper_broker, 향후 live_broker) |
+| `engine/notifications/` | 알림 전송 (discord_webhook, alert_*, 향후 telegram) |
+| `engine/interfaces/` | 사용자 접점 (Discord 봇, scanner 런타임) |
+| `engine/backtest/` | 백테스트 프레임워크 |
+| `engine/application/` | 서비스 계층 (trading orchestration) |
+| `api/` | REST API (FastAPI routers) |
+| `config/` | 설정 (변경 빈도 낮음) |
+| `state/` | 런타임 상태 (자동 생성, 변경 빈도 높음) |
+| `strategies/` | 전략 레지스트리 + 정의 + 연구 (STRUCTURE.md 참조) |
 
-### engine/analysis/ — 분석 도구 (독립 함수, 전략에서 import)
+---
 
-| 파일 | 책임 |
-|------|------|
-| `chart_patterns.py` | 12종 차트 패턴 감지 (swing 기반) |
-| `key_levels.py` | 지지/저항 레벨 계산 |
-| `market_structure.py` | 시장 구조 분석 (HH/HL/LH/LL) |
-| `confluence.py` | 합류 점수 계산 |
-| `mtf_confluence.py` | 멀티타임프레임 합류 |
-| `trend_strength.py` | ADX 필터 |
-| `volume_profile.py` | 볼륨 프로파일 (VPVR) |
-| `bollinger.py` | 볼린저 밴드 위치 |
-| `confidence.py` | 신뢰도 점수 계산 |
-| `cross_exchange.py` | 거래소 간 리드-래그 |
-| `exchange_dominance.py` | 거래소 도미넌스 분석 |
-| `pullback.py` | 풀백 품질 측정 |
-| `smc.py` | Smart Money Concepts (CHoCH/BOS/OB) |
-| `candle_patterns.py` | 캔들 패턴 (analysis 레벨, chart_patterns 보조) |
+## 용어 사전
 
-### engine/backtest/ — 백테스트
+| 용어 | 정의 | 반환 타입 |
+|------|------|-----------|
+| **indicator** | OHLCV → 수치 계산 결과 | `float`, `ndarray`, `SingleResult` |
+| **pattern** | indicator/OHLCV → 구조 인식 | `dict{name, direction}` |
+| **signal** | pattern + indicator → 매매 판단 | `TradingSignal(side, action)` |
+| **alert** | signal → 사용자 통보 | side effect |
+| **order** | alert 승인 → 실제 주문 | `OrderRequest` |
 
-| 파일 | 책임 |
-|------|------|
-| `pattern_backtest.py` | **주력** — 6종 패턴 백테스트 |
-| `confluence_backtest_v2.py` | 2-pass 합류 백테스트 (1H→5m) |
-| `confluence_backtest.py` | 1-pass 합류 백테스트 (4H) — v2 통합 후 삭제 예정 |
-| `strategy_base.py` | 공용 기반 (StrategyTrade, load_ohlcv, calc_metrics) |
-| `metrics.py` | 성과 지표 (WR, PF, Sharpe, MDD) |
-| `benchmark_periods.py` | BULL/BEAR/RANGE 벤치마크 구간 정의 |
-| `direction_predictor.py` | pred_multi 방향 예측기 |
-| `slippage.py` | 슬리피지 모델 (고정/변동성/혼합) |
-| `report.py` | 백테스트 리포트 생성 |
-| `runner.py` | 전략 실행기 (StrategyDefinition 기반) |
-| `optimizer.py` | 파라미터 최적화 (grid search) |
-| `scanner_backtest.py` | 스캐너 백테스트 프레임워크 |
-| `scanner_optimizer.py` | 스캐너 파라미터 최적화 |
-| `auto_reoptimize.py` | 자동 재최적화 스케줄러 |
+### 혼동 주의
 
-### engine/interfaces/ — 외부 인터페이스
+| 쌍 | 구분 |
+|----|------|
+| indicator / pattern | 숫자 vs 구조/형태 |
+| signal / alert | 내부 판단 vs 외부 통보 |
+| direction / side | 시장 방향(BULL/BEAR/NEUTRAL) vs 포지션(LONG/SHORT) |
+| trend / direction | 구조적 추세(BULLISH/BEARISH/RANGING) vs 최종 판단 |
+| confidence / score | 0~1 최종 신뢰도 vs 중간 계산 점수 |
+| detector / scanner | 단일 심볼 감지 vs 다수 심볼 순회 |
+| filter / detector | 미충족 제거 vs 충족 발견 |
+| strategy / signal | 룰셋 정의(JSON) vs 적용 결과 |
 
-| 경로 | 책임 |
-|------|------|
-| `discord/control_bot.py` | Discord 봇 부트스트랩 (guild sync) |
-| `discord/commands/scanner.py` | `/스캔`, `/자동시작`, `/자동중지`, `/순위`, `/설정`, `/패턴` |
-| `discord/commands/analysis.py` | `/분석` 명령 |
-| `discord/commands/pattern.py` | `/패턴감지` 명령 |
-| `discord/commands/runtime.py` | `/상태`, `/일시정지`, `/재개`, `/모드` |
-| `discord/commands/orders.py` | `/대기주문`, `/승인`, `/거부` |
-| `discord/commands/base.py` | CommandPlugin 기반 클래스 |
-| `scanner/runtime.py` | 스캐너 런타임 관리 |
+### 금지 용어 (모호)
 
-### engine/alerts/ — 알림 전송
+`result`(단독), `data`(단독), `value`(단독), `info`, `process` → 구체적으로 명시
 
-| 파일 | 책임 |
-|------|------|
-| `discord.py` | Signal 모델 + webhook 전송 |
-| `discord_bot.py` | 봇 인스턴스 관리 |
-| `bot_config.py` | 봇 설정 로드 |
-| `positions.py` | 포지션 추적 + 알림 |
+---
 
-### 기타
+## 네이밍 규칙
 
-| 경로 | 책임 |
-|------|------|
-| `engine/schema.py` | 전략 정의 스키마 (Pydantic) |
-| `engine/cli.py` | CLI 명령어 (typer) |
-| `engine/regime/` | 레짐 판단 (crypto, sector) |
-| `engine/store/` | DB 저장소 (SQLite) |
-| `engine/knowledge/` | 지식 태깅 시스템 |
-| `engine/indicators/` | 지표 계산 (compute, registry, custom) |
-| `engine/plugins/` | 플러그인 등록/실행 |
-| `engine/infrastructure/` | 인프라 (paper_broker, webhook, json_store) |
-| `engine/domain/trading/` | 도메인 모델 (Trade, Position, ports) |
+### 디렉토리
+
+```
+1. 복수형 (동종 파일 컬렉션): indicators/, patterns/, alerts/
+   구조적 하위 계층: backtest/, domain/, infrastructure/
+2. 영어 소문자 + 단일 단어 선호 (snake_case 최소화)
+3. 약어 금지: infra/ ✗, infrastructure/ ✓
+4. 계층 최대 3단계: engine/indicators/price/
+5. __init__.py: 외부 공개 함수만 re-export
+6. 파일 5개 이상 → 하위 dir 분리 검토
+7. 새 dir 생성 시 기존 dir로 해결 가능한지 먼저 확인
+```
+
+### 파일
+
+```
+파일명 = [접두사_대상] + [접미사_역할].py
+
+접두사: 대상이 명확할 때 필수 (upbit_, discord_, strategy_)
+        dir가 네임스페이스면 생략 가능 (indicators/momentum/rsi.py)
+접미사: 역할 표시 (_detector, _scanner, _cache, _store 등)
+        지표/패턴 자체는 접미사 없음 (rsi.py, bollinger.py)
+```
+
+**접미사 사전:**
+
+| 접미사 | 역할 | 예시 |
+|--------|------|------|
+| `_provider` | 외부 데이터 조달 | `upbit_provider.py` |
+| `_cache` | 캐싱 | `ohlcv_cache.py` |
+| `_detector` | 패턴/조건 감지 | `pattern_detector.py` |
+| `_scanner` | 주기적 순회 탐색 | `signal_scanner.py` |
+| `_filter` | 조건부 필터링 | `watermelon_filter.py` |
+| `_manager` | 상태 관리/조율 | `risk_manager.py` |
+| `_store` | 영속 저장/로드 | `json_store.py` |
+| `_evaluator` | 룰/조건 평가 | `strategy_evaluator.py` |
+| `_base` | 추상/인터페이스 | `provider_base.py` |
+| (없음) | 지표/패턴 자체 | `rsi.py`, `bollinger.py` |
+
+**동사 사전 (함수명):**
+
+| 동사 | 용도 | 예시 |
+|------|------|------|
+| `calc_` | 수치 계산 | `calc_adx_filter()` |
+| `detect_` | 패턴/구조 감지 | `detect_chart_patterns()` |
+| `evaluate_` | 룰/조건 판정 | `evaluate_condition_group()` |
+| `judge_` | 최종 방향 판단 | `judge_direction()` |
+| `fetch_` | 외부 데이터 조회 | `fetch_ohlcv()` |
+| `build_` | 복합 객체 조립 | `build_context()` |
+| `is_` / `has_` | bool 판별 | `is_trending()` |
+| `apply_` | 변환/적용 | `apply_risk_management()` |
+
+### 파일 분할 규칙
+
+```
+1. 파일당 하나의 책임 (단일 지표, 단일 패턴, 단일 기능)
+2. 300줄 초과 시 분할 검토
+3. 공유 타입/유틸 → base.py에 집중
+4. 하위 호환 re-export는 __init__.py에서만
+5. 테스트는 원본과 1:1 매칭 (test_xxx.py)
+```
 
 ---
 
 ## 새 전략 추가 체크리스트
 
-1. **감지기 작성**: `engine/strategy/` 에 `{name}_detector.py` 생성
-   - 함수 시그니처: `detect_{name}(df: pd.DataFrame, ...) -> list[PatternSignal]`
-   - `PatternSignal` 재사용 (pattern_detector.py에서 import)
-   - SR 기반 SL/TP 헬퍼 재사용 (`_calc_long_tp`, `_calc_short_tp`)
-
-2. **pattern_alert.py 연동**: `_analyze_tf()` 에 감지기 호출 추가
-   - import 추가
-   - 결과를 signals 리스트에 append
-
-3. **메시지 포맷**: `_build_message()` 에 한글 패턴명 매핑 추가
-
-4. **Discord 헬프**: `commands/scanner.py` → `_PATTERN_HELP` 에 설명 추가
-
-5. **백테스트**: `backtest/pattern_backtest.py` 에 백테스트 함수 추가
-
-6. **테스트 작성**: `tests/test_{name}_detector.py`
-   - 최소: 감지 정상, 미감지 정상, edge case
-   - 커버리지 80%+
-
-7. **이 문서 업데이트**: 모듈 책임 테이블에 추가
+1. `engine/strategy/`에 감지기 작성 (PatternSignal 재사용)
+2. `pattern_alert.py` → `_analyze_tf()`에 감지기 호출 추가
+3. `_build_message()`에 한글 패턴명 매핑 추가
+4. `commands/scanner.py` → `_PATTERN_HELP`에 설명 추가
+5. `backtest/pattern_backtest.py`에 백테스트 함수 추가
+6. 테스트 작성 (감지/미감지/edge case, 커버리지 80%+)
+7. `strategies/registry.json`에 항목 추가 + 전략 dir 생성
 
 ---
 
 ## 금지 사항
 
-- **새 스캐너 파일 금지**: `pattern_alert.py`가 유일한 스캐너 오케스트레이터
-- **중복 백테스트 스크립트 금지**: 파라미터는 config/JSON으로 분리
-- **레거시 부활 금지**: `engine/legacy/` 삭제됨, 복원 불가
-- **폐기 전략 재구현 금지**: BB Squeeze, BB Bounce, Grid, Donchian, RSI+S/R, Keltner MR, Bull/Bear Flag (STRATEGY_REVIEW.md 참조)
-
----
-
-## 폐기 전략 목록 (재구현 금지)
-
-| 전략 | 폐기 사유 | 삭제일 |
-|------|----------|--------|
-| BB Squeeze | 전 구간 적자, WR 34% | 2026-03-09 |
-| BB Bounce | SL 버그 수정 후 전멸 | 2026-03-09 |
-| Grid Trading | 수수료에 잠식 | 2026-03-09 |
-| Donchian Breakout | 적자 | 2026-03-09 |
-| RSI + S/R | 적자 | 2026-03-09 |
-| Keltner MR | 적자 | 2026-03-09 |
-| Bull Flag | 전 구간 적자 | 2026-03-09 |
-| Bear Flag | DESC_TRIANGLE 대비 열등 | 2026-03-09 |
-| EMA Stack SHORT | BEAR에서 적자 | 2026-03-09 |
-| Upbit Scanner (10종) | pattern_alert로 교체 | 2026-03-09 |
-| Swing Scanner (6종) | pattern_alert로 교체 | 2026-03-09 |
-
----
-
-## 채택 전략 (운용 중)
-
-| 전략 | 방향 | 레짐 | 타임프레임 | 검증 |
-|------|------|------|-----------|------|
-| Double Bottom | LONG | BULL | 1H (+ 5m/15m/30m/4h 스캔) | 3거래소 16/16 구간승률 |
-| Double Top | SHORT | BEAR | 1H | 3거래소 10/10 구간승률 |
-| Ascending Triangle | LONG | BULL | 1H | 3거래소 16/16 구간승률 |
-| Descending Triangle | SHORT | BEAR | 1H | 3거래소 10/10 구간승률 |
-| Pullback (EMA) | LONG/SHORT | 추세 | 4H 최적 | 144거래 53.5% WR, +62.6R |
-| TA-Lib 캔들 21종 | 보조 | 전체 | 전체 | 보조 신호 (방향 편향) |
-| 수박지표 | 보조 (LONG) | BULL | D1 | 15건 WR 60% (독립 불가) |
-
----
-
-*최종 업데이트: 2026-03-09 — 코드 다이어트 후 (33,735줄 → 19,068줄)*
+- **새 스캐너 파일 금지** — `pattern_alert.py`가 유일한 오케스트레이터
+- **버전 파일 금지** — v2, v3 파일명 사용 안 함 (git으로 관리)
+- **재정의/재구현 금지** — 기존 모듈의 기능을 다른 파일에 다시 만들지 않음
+- **기능/이름 변경 시 제안→승인→적용** — 임의 적용 금지
+- **폐기 전략 재구현 금지** — strategies/deprecated 참조
+- **레거시 부활 금지**
+- **모호한 파일명 금지** — 접두사(대상) + 접미사(역할) 준수

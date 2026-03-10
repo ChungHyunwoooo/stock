@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import json
@@ -9,19 +10,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from api.deps import get_db
+from api.dependencies import get_db
 from api.routers.symbols import get_symbol_name, get_symbols_by_market
 from engine.backtest.runner import BacktestRunner
 from engine.schema import StrategyDefinition
-from engine.store.models import BacktestRecord
-from engine.store.repository import BacktestRepository, StrategyRepository
+from engine.core.db_models import BacktestRecord
+from engine.core.repository import BacktestRepository, StrategyRepository
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 _repo = BacktestRepository()
 _s_repo = StrategyRepository()
-
 
 class BacktestRunRequest(BaseModel):
     strategy_id: int | None = None
@@ -33,7 +33,6 @@ class BacktestRunRequest(BaseModel):
     initial_capital: float = 10_000.0
     save: bool = True
     regime_enabled: bool = False
-
 
 class BacktestResponse(BaseModel):
     id: int
@@ -63,7 +62,6 @@ class BacktestResponse(BaseModel):
             result_json=r.result_json,
             created_at=str(r.created_at)[:19] if r.created_at else None,
         )
-
 
 @router.post("/run", response_model=BacktestResponse, status_code=201)
 def run_backtest(
@@ -102,14 +100,12 @@ def run_backtest(
 
     return BacktestResponse.from_record(record)
 
-
 @router.get("", response_model=list[BacktestResponse])
 def list_backtests(
     db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
 ) -> list[BacktestResponse]:
     records = _repo.list_all(db)
     return [BacktestResponse.from_record(r) for r in records]
-
 
 @router.get("/{backtest_id}", response_model=BacktestResponse)
 def get_backtest(
@@ -121,7 +117,6 @@ def get_backtest(
         raise HTTPException(status_code=404, detail="Backtest not found")
     return BacktestResponse.from_record(record)
 
-
 @router.get("/strategy/{strategy_id}", response_model=list[BacktestResponse])
 def get_by_strategy(
     strategy_id: int,
@@ -130,11 +125,9 @@ def get_by_strategy(
     records = _repo.get_by_strategy(db, strategy_id)
     return [BacktestResponse.from_record(r) for r in records]
 
-
 # ---------------------------------------------------------------------------
 # Multi-symbol scan
 # ---------------------------------------------------------------------------
-
 
 class ScanRequest(BaseModel):
     strategy_id: int | None = None
@@ -147,7 +140,6 @@ class ScanRequest(BaseModel):
     initial_capital: float = 10_000.0
     top_n: int = 10
 
-
 class ScanResultItem(BaseModel):
     symbol: str
     name: str
@@ -156,14 +148,12 @@ class ScanResultItem(BaseModel):
     max_drawdown: float | None
     num_trades: int
 
-
 class ScanResponse(BaseModel):
     total_scanned: int
     total_success: int
     total_failed: int
     best: list[ScanResultItem]
     worst: list[ScanResultItem]
-
 
 def _run_single_backtest(
     runner: BacktestRunner,
@@ -189,7 +179,6 @@ def _run_single_backtest(
     except Exception as e:
         logger.debug("Scan backtest failed for %s: %s", symbol, e)
         return None
-
 
 @router.post("/scan", response_model=ScanResponse)
 def scan_symbols(

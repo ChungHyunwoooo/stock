@@ -13,7 +13,6 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class ExchangeQuote:
     exchange: str
@@ -22,13 +21,11 @@ class ExchangeQuote:
     quote_volume: float
     quote_volume_usd: float
 
-
 def _safe_float(v, default: float = 0.0) -> float:
     try:
         return float(v)
     except Exception:
         return default
-
 
 def _load_ccxt_exchange(name: str):
     import ccxt
@@ -42,7 +39,6 @@ def _load_ccxt_exchange(name: str):
     if name == "gateio":
         return ccxt.gateio()
     return ccxt.binance()
-
 
 def fetch_exchange_ohlcv(
     exchange_name: str,
@@ -68,7 +64,6 @@ def fetch_exchange_ohlcv(
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     return df.set_index("timestamp")
 
-
 def _fetch_usdt_quote(exchange_name: str, base: str) -> ExchangeQuote | None:
     """Fetch one exchange quote for BASE/USDT."""
     try:
@@ -89,7 +84,6 @@ def _fetch_usdt_quote(exchange_name: str, base: str) -> ExchangeQuote | None:
     except Exception as e:
         logger.debug("dominance quote failed: %s %s", exchange_name, e)
         return None
-
 
 def _fetch_upbit_quote(base: str, usdkrw: float) -> ExchangeQuote | None:
     import pyupbit
@@ -122,7 +116,6 @@ def _fetch_upbit_quote(base: str, usdkrw: float) -> ExchangeQuote | None:
         logger.debug("dominance quote failed: upbit %s", e)
         return None
 
-
 def _ratio_rows(rows: list[ExchangeQuote]) -> list[dict]:
     total = sum(r.quote_volume_usd for r in rows) or 1.0
     out = []
@@ -139,7 +132,6 @@ def _ratio_rows(rows: list[ExchangeQuote]) -> list[dict]:
         )
     out.sort(key=lambda x: x["quote_volume_24h_usd"], reverse=True)
     return out
-
 
 def analyze_exchange_dominance(
     base: str,

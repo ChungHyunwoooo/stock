@@ -1,13 +1,10 @@
 """TA-Lib indicator registry mapping uppercase names to abstract functions."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 
 import talib.abstract as ta
 
 from engine.indicators.custom import staircase_indicator, watermelon_indicator
-
 
 INDICATOR_REGISTRY: dict[str, Callable] = {
     "RSI": ta.RSI,
@@ -31,7 +28,6 @@ INDICATOR_REGISTRY: dict[str, Callable] = {
     "STAIRCASE": staircase_indicator,
     "WATERMELON": watermelon_indicator,
 }
-
 
 def get_indicator(name: str) -> Callable:
     """Return the ta-lib abstract function for the given uppercase indicator name.

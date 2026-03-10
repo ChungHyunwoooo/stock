@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import json
@@ -6,24 +7,27 @@ from pathlib import Path
 import pandas as pd
 
 from engine.analysis import build_context
-from engine.analysis.confidence import calc_confidence_v2, get_last_breakdown
-from engine.domain.trading.models import SignalAction, TradeSide, TradingSignal
+from engine.analysis.direction import calc_confidence_v2, get_last_breakdown
+from engine.core.models import SignalAction, TradeSide, TradingSignal
 from engine.schema import Direction, StrategyDefinition
-from engine.strategy.engine import StrategyEngine
-
+from engine.strategy.strategy_evaluator import StrategyEngine
 
 class StrategyCatalog:
-    def __init__(self, base_dir: str | Path = "strategies/active") -> None:
+    def __init__(self, base_dir: str | Path = "strategies") -> None:
         self.base_dir = Path(base_dir)
 
     def list_definitions(self) -> list[StrategyDefinition]:
         definitions: list[StrategyDefinition] = []
-        if not self.base_dir.exists():
-            return definitions
-        for path in sorted(self.base_dir.glob("*.json")):
-            definitions.append(StrategyDefinition.model_validate(json.loads(path.read_text())))
+        registry_path = self.base_dir / "registry.json"
+        if registry_path.exists():
+            registry = json.loads(registry_path.read_text())
+            for entry in registry.get("strategies", []):
+                if entry.get("status") != "active":
+                    continue
+                def_path = Path(entry.get("definition", ""))
+                if def_path.exists():
+                    definitions.append(StrategyDefinition.model_validate(json.loads(def_path.read_text())))
         return definitions
-
 
 class DefinitionSignalGenerator:
     def __init__(self, engine: StrategyEngine | None = None) -> None:

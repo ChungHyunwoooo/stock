@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from threading import Lock
 from typing import Any
 
@@ -51,7 +51,6 @@ TTL_MAP = {
     "1w": 7200,        # 2시간
 }
 
-
 @dataclass
 class CacheEntry:
     """캐시 항목."""
@@ -62,7 +61,6 @@ class CacheEntry:
     @property
     def expired(self) -> bool:
         return time.time() - self.fetched_at > self.ttl
-
 
 class OHLCVCacheManager:
     """OHLCV 인메모리 캐시 매니저.

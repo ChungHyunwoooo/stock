@@ -24,7 +24,6 @@ app.add_typer(runtime_app, name="runtime")
 
 console = Console()
 
-
 def _print_runtime_state(state) -> None:
     pending = [p for p in state.pending_orders if p.state.value == "pending"]
     open_positions = [p for p in state.positions if p.status.value == "open"]
@@ -37,11 +36,9 @@ def _print_runtime_state(state) -> None:
     console.print(f"executions      : {len(state.executions)}")
     console.print(f"updated at      : {state.updated_at}")
 
-
 # ---------------------------------------------------------------------------
 # Strategy commands
 # ---------------------------------------------------------------------------
-
 
 @strategy_app.command("validate")
 def strategy_validate(
@@ -61,7 +58,6 @@ def strategy_validate(
     except Exception as exc:
         console.print(f"[red]✗ Invalid:[/red] {exc}")
         raise typer.Exit(1)
-
 
 @strategy_app.command("show")
 def strategy_show(
@@ -86,14 +82,14 @@ def strategy_show(
     console.print(f"  Tags        : {', '.join(strategy.metadata.tags) or '—'}")
     console.print()
 
-
 @strategy_app.command("list")
 def strategy_list(
     db_url: str = typer.Option("sqlite:///tse.db", "--db", help="Database URL"),
     status: str | None = typer.Option(None, "--status", help="Filter by status"),
 ) -> None:
     """List all strategies stored in the database."""
-    from engine.store import StrategyRepository, get_session, get_engine, init_db
+    from engine.core.repository import StrategyRepository
+    from engine.core.database import get_session, get_engine, init_db
 
     get_engine(db_url)
     init_db(db_url)
@@ -124,11 +120,9 @@ def strategy_list(
 
     console.print(table)
 
-
 # ---------------------------------------------------------------------------
 # Backtest commands
 # ---------------------------------------------------------------------------
-
 
 @backtest_app.command("run")
 def backtest_run(
@@ -165,8 +159,9 @@ def backtest_run(
     console.print(f"  Final Capital : {result.final_capital:,.2f}")
 
     if save:
-        from engine.store import BacktestRepository, StrategyRepository, get_engine, get_session, init_db
-        from engine.store.models import BacktestRecord
+        from engine.core.repository import BacktestRepository, StrategyRepository
+        from engine.core.database import get_engine, get_session, init_db
+        from engine.core.db_models import BacktestRecord
 
         get_engine(db_url)
         init_db(db_url)
@@ -191,11 +186,9 @@ def backtest_run(
 
         console.print("\n[green]✓ Result saved to database.[/green]")
 
-
 # ---------------------------------------------------------------------------
 # Knowledge commands
 # ---------------------------------------------------------------------------
-
 
 @knowledge_app.command("list")
 def knowledge_list(
@@ -205,7 +198,7 @@ def knowledge_list(
     query: str | None = typer.Option(None, "--query", "-q", help="Filter by title substring"),
 ) -> None:
     """List knowledge base entries."""
-    from engine.knowledge import KnowledgeStore
+    from engine.core.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore(base_dir)
     tags = [tag] if tag else None
@@ -226,14 +219,13 @@ def knowledge_list(
 
     console.print(table)
 
-
 @knowledge_app.command("search")
 def knowledge_search(
     query: str = typer.Argument(..., help="Search query (title substring)"),
     base_dir: str = typer.Option("strategies/knowledge", "--dir", help="Knowledge base directory"),
 ) -> None:
     """Search knowledge base by title."""
-    from engine.knowledge import KnowledgeStore
+    from engine.core.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore(base_dir)
     entries = store.search(query=query)
@@ -249,11 +241,9 @@ def knowledge_search(
         console.print(f"  {e.path}")
         console.print()
 
-
 # ---------------------------------------------------------------------------
 # Top-level: backtest (spec-compatible flat command)
 # ---------------------------------------------------------------------------
-
 
 @app.command()
 def backtest(
@@ -340,7 +330,6 @@ def backtest(
             )
         console.print(trades_table)
 
-
 def _generate_html_report(result: object, strategy_name: str, symbol: str) -> None:
     """Write a minimal HTML report for BacktestResult."""
     from engine.backtest.runner import BacktestResult
@@ -376,11 +365,9 @@ def _generate_html_report(result: object, strategy_name: str, symbol: str) -> No
     output_path.write_text(html)
     console.print(f"[green]Report written to {output_path}[/green]")
 
-
 # ---------------------------------------------------------------------------
 # Top-level: search (spec-compatible flat command)
 # ---------------------------------------------------------------------------
-
 
 @app.command()
 def search(
@@ -389,7 +376,7 @@ def search(
     query: str = typer.Option(None, "--query", "-q", help="Title substring search"),
 ) -> None:
     """Search knowledge base."""
-    from engine.knowledge.store import KnowledgeStore
+    from engine.core.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore()
     results = store.search(query=query or None, tags=list(tag) if tag else None, category=category)
@@ -412,16 +399,14 @@ def search(
         )
     console.print(tbl)
 
-
 # ---------------------------------------------------------------------------
 # strategies sub-commands (plural, directory-based)
 # ---------------------------------------------------------------------------
 
-
 @strategies_app.command("list")
 def strategies_list(
     status: str = typer.Option(None, "--status", help="Filter by status"),
-    directory: str = typer.Option("strategies/active", "--dir", "-d", help="Directory to scan"),
+    directory: str = typer.Option("strategies", "--dir", "-d", help="Directory to scan"),
 ) -> None:
     """List all strategies from a directory of JSON files."""
     from engine.schema import StrategyDefinition
@@ -469,7 +454,6 @@ def strategies_list(
     else:
         console.print(tbl)
 
-
 @strategies_app.command("show")
 def strategies_show(path: str = typer.Argument(..., help="Path to strategy JSON")) -> None:
     """Show strategy details."""
@@ -497,7 +481,6 @@ def strategies_show(path: str = typer.Argument(..., help="Path to strategy JSON"
         )
     )
 
-
 @strategies_app.command("validate")
 def strategies_validate(path: str = typer.Argument(..., help="Path to strategy JSON")) -> None:
     """Validate strategy JSON against schema."""
@@ -523,11 +506,9 @@ def strategies_validate(path: str = typer.Argument(..., help="Path to strategy J
         console.print(f"[red]Error reading file: {exc}[/red]")
         raise typer.Exit(1)
 
-
 # ---------------------------------------------------------------------------
 # optimize
 # ---------------------------------------------------------------------------
-
 
 @app.command()
 def optimize(
@@ -619,15 +600,13 @@ def optimize(
 
     console.print(tbl)
 
-
 # ---------------------------------------------------------------------------
 # Runtime commands
 # ---------------------------------------------------------------------------
 
-
 @runtime_app.command("status")
 def runtime_status(
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Show trading runtime status."""
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
@@ -635,24 +614,22 @@ def runtime_status(
     runtime = build_trading_runtime(TradingRuntimeConfig(state_path=state_path))
     _print_runtime_state(runtime.control.get_state())
 
-
 @runtime_app.command("mode")
 def runtime_mode(
     mode: str = typer.Argument(..., help="alert_only | semi_auto | auto"),
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Change the trading mode."""
-    from engine.domain.trading import TradingMode
+    from engine.core import TradingMode
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
 
     runtime = build_trading_runtime(TradingRuntimeConfig(state_path=state_path))
     state = runtime.control.set_mode(TradingMode(mode))
     _print_runtime_state(state)
 
-
 @runtime_app.command("pause")
 def runtime_pause(
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Pause the trading runtime."""
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
@@ -661,10 +638,9 @@ def runtime_pause(
     state = runtime.control.pause()
     _print_runtime_state(state)
 
-
 @runtime_app.command("resume")
 def runtime_resume(
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Resume the trading runtime."""
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
@@ -673,7 +649,6 @@ def runtime_resume(
     state = runtime.control.resume()
     _print_runtime_state(state)
 
-
 @runtime_app.command("emit-sample")
 def runtime_emit_sample(
     symbol: str = typer.Option("BTC/USDT", "--symbol", help="Sample signal symbol"),
@@ -681,10 +656,10 @@ def runtime_emit_sample(
     side: str = typer.Option("long", "--side", help="long | short"),
     price: float = typer.Option(100_000.0, "--price", help="Entry price"),
     quantity: float = typer.Option(1.0, "--qty", help="Order quantity"),
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Emit a sample signal through the full trading runtime."""
-    from engine.domain.trading import SignalAction, TradeSide, TradingSignal
+    from engine.core import SignalAction, TradeSide, TradingSignal
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
 
     runtime = build_trading_runtime(TradingRuntimeConfig(state_path=state_path))
@@ -702,7 +677,6 @@ def runtime_emit_sample(
     state = runtime.orchestrator.process_signal(signal, quantity=quantity)
     _print_runtime_state(state)
 
-
 @runtime_app.command("evaluate")
 def runtime_evaluate(
     strategy_path: str = typer.Argument(..., help="Path to strategy JSON"),
@@ -712,10 +686,10 @@ def runtime_evaluate(
     timeframe: str | None = typer.Option(None, "--timeframe", help="Override timeframe"),
     quantity: float = typer.Option(1.0, "--qty", help="Order quantity"),
     execute: bool = typer.Option(True, "--execute/--no-execute", help="Forward signal into runtime"),
-    state_path: str = typer.Option("config/runtime_state.json", "--state", help="Runtime state path"),
+    state_path: str = typer.Option("state/runtime_state.json", "--state", help="Runtime state path"),
 ) -> None:
     """Evaluate a strategy on market data and optionally route the signal into runtime."""
-    from engine.application.trading.monitor import StrategyMonitorService
+    from engine.application.trading.strategy_monitor import StrategyMonitorService
     from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
 
     runtime = build_trading_runtime(TradingRuntimeConfig(state_path=state_path))
@@ -740,7 +714,6 @@ def runtime_evaluate(
     if execute:
         _print_runtime_state(runtime.control.get_state())
 
-
 @runtime_app.command("run-bot")
 def runtime_run_bot() -> None:
     """Run the Discord control bot in the foreground."""
@@ -754,7 +727,6 @@ def runtime_run_bot() -> None:
 
     bot = create_bot(build_trading_runtime(TradingRuntimeConfig()).control)
     bot.run(token)
-
 
 if __name__ == "__main__":
     app()

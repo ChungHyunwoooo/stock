@@ -8,7 +8,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -19,19 +18,16 @@ class MarketType(str, Enum):
     crypto_spot = "crypto_spot"
     crypto_futures = "crypto_futures"
 
-
 class Direction(str, Enum):
     long = "long"
     short = "short"
     both = "both"
-
 
 class StrategyStatus(str, Enum):
     draft = "draft"
     testing = "testing"
     active = "active"
     archived = "archived"
-
 
 class ConditionOp(str, Enum):
     gt = "gt"
@@ -41,7 +37,6 @@ class ConditionOp(str, Enum):
     eq = "eq"
     crosses_above = "crosses_above"
     crosses_below = "crosses_below"
-
 
 # ---------------------------------------------------------------------------
 # Indicator
@@ -61,7 +56,6 @@ class IndicatorDef(BaseModel):
         ),
     )
 
-
 # ---------------------------------------------------------------------------
 # Conditions
 # ---------------------------------------------------------------------------
@@ -76,13 +70,11 @@ class Condition(BaseModel):
         description="Column name (str) for cross-column compare, or numeric literal",
     )
 
-
 class ConditionGroup(BaseModel):
     """A group of conditions combined with AND/OR logic."""
 
     logic: Literal["and", "or"] = "and"
     conditions: list[Condition] = Field(..., min_length=1)
-
 
 # ---------------------------------------------------------------------------
 # Risk
@@ -93,7 +85,6 @@ class RiskParams(BaseModel):
     take_profit_pct: float | None = Field(None, ge=0, le=1)
     risk_per_trade_pct: float = Field(0.02, ge=0, le=1)
     trailing_stop_pct: float | None = Field(None, ge=0, le=1)
-
 
 # ---------------------------------------------------------------------------
 # Metadata
@@ -106,7 +97,6 @@ class StrategyMeta(BaseModel):
     tags: list[str] = Field(default_factory=list)
     notes: str = ""
 
-
 # ---------------------------------------------------------------------------
 # Regime Config (optional top-down macro overlay)
 # ---------------------------------------------------------------------------
@@ -118,7 +108,6 @@ class RegimeConfig(BaseModel):
     btc_ema_long: int = Field(200, ge=50, le=500)
     alt_basket_size: int = Field(10, ge=3, le=20)
     dominance_period: int = Field(20, ge=5, le=60)
-
 
 # ---------------------------------------------------------------------------
 # Top-level Strategy Definition

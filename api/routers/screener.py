@@ -5,14 +5,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/screener", tags=["screener"])
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Models
@@ -37,13 +35,11 @@ class CoinAnalysis(BaseModel):
     macd_hist: float
     summary: str
 
-
 class ScreenerResponse(BaseModel):
     coins: list[CoinAnalysis]
     regime: str
     exposure: float
     scanned_at: str
-
 
 # ---------------------------------------------------------------------------
 # Sector map (shared with regime/sector.py)
@@ -61,7 +57,6 @@ SECTOR_MAP: dict[str, list[str]] = {
 SYMBOL_SECTOR = {sym: sect for sect, syms in SECTOR_MAP.items() for sym in syms}
 ALL_SYMBOLS = [sym for syms in SECTOR_MAP.values() for sym in syms]
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -73,14 +68,12 @@ def _calc_rsi(series: pd.Series, period: int = 14) -> pd.Series:
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-
 def _calc_macd(series: pd.Series) -> pd.Series:
     ema12 = series.ewm(span=12).mean()
     ema26 = series.ewm(span=26).mean()
     macd_line = ema12 - ema26
     signal_line = macd_line.ewm(span=9).mean()
     return macd_line - signal_line  # histogram
-
 
 def _analyze_coin(df: pd.DataFrame, symbol: str, funding_rate: float | None = None) -> CoinAnalysis | None:
     """Analyze a single coin and return scoring."""
@@ -221,7 +214,6 @@ def _analyze_coin(df: pd.DataFrame, symbol: str, funding_rate: float | None = No
         summary=summary,
     )
 
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -234,7 +226,7 @@ def scan_all(
 ) -> ScreenerResponse:
     """Scan coins and return technical analysis scores."""
     from engine.data.provider_crypto import CryptoProvider
-    from engine.regime.crypto import CryptoRegimeEngine
+    from engine.analysis.crypto_regime import CryptoRegimeEngine
 
     # Current regime
     try:
@@ -279,7 +271,6 @@ def scan_all(
         exposure=exposure,
         scanned_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
     )
-
 
 @router.get("/coin/{symbol}", response_model=CoinAnalysis)
 def analyze_coin(symbol: str) -> CoinAnalysis:

@@ -1,0 +1,42 @@
+{
+  "name": "Bull/Bear Flag",
+  "version": "1.0",
+  "status": "deprecated",
+  "description": "Bull Flag/Bear Flag 패턴 감지 후 돌파 방향으로 진입. Bull Flag 전 구간 손실, Bear Flag는 Descending Triangle 대비 열등하여 폐기.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "EMA",
+      "params": {"timeperiod": 21},
+      "output": "ema_21"
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {"left": "flag_pattern_detected", "op": "eq", "right": true, "label": "flag_formed"},
+      {"left": "close", "op": "crosses_above", "right": "flag_resistance", "label": "bull_flag_breakout"}
+    ]
+  },
+  "exit": {
+    "logic": "or",
+    "conditions": [
+      {"left": "close", "op": "crosses_below", "right": "ema_21", "label": "long_exit"},
+      {"left": "close", "op": "crosses_above", "right": "ema_21", "label": "short_exit"}
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "created_at": "2026-02-27",
+    "deprecated_date": "2026-03-09",
+    "deprecated_reason": "Bull 전 구간 적자, Bear는 DESC_TRIANGLE 대비 열등",
+    "tags": ["flag-pattern", "bull-flag", "bear-flag", "breakout", "deprecated"]
+  }
+}

@@ -1,8 +1,6 @@
-from __future__ import annotations
 
 from engine.application.trading.presenters import build_signal_presentation
-from engine.domain.trading import SignalAction, TradeSide, TradingSignal
-
+from engine.core import SignalAction, TradeSide, TradingSignal
 
 def test_signal_presentation_includes_trade_decision_fields():
     signal = TradingSignal(

@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from discord import Interaction, app_commands
 
@@ -6,7 +5,6 @@ from engine.application.trading.exceptions import PendingOrderNotFoundError
 from engine.interfaces.discord.autocomplete import pending_id_autocomplete
 from engine.interfaces.discord.context import DiscordBotContext
 from engine.interfaces.discord.formatting import format_pending_list
-
 
 class OrderCommandPlugin:
     name = "orders"

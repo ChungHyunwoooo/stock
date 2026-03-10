@@ -1,11 +1,9 @@
-from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock, patch
 
-from engine.domain.trading import SignalAction, TradeSide, TradingSignal
-from engine.infrastructure.notifications.discord_webhook import DiscordWebhookNotifier
-
+from engine.core import SignalAction, TradeSide, TradingSignal
+from engine.notifications.discord_webhook import DiscordWebhookNotifier
 
 def test_notifier_attaches_chart_when_available(tmp_path):
     config_path = tmp_path / 'discord.json'
@@ -22,7 +20,7 @@ def test_notifier_attaches_chart_when_available(tmp_path):
         take_profits=[104.0],
     )
 
-    with patch('engine.infrastructure.notifications.discord_webhook.build_signal_chart', return_value=b'png-bytes'), \
+    with patch('engine.notifications.discord_webhook.build_signal_chart', return_value=b'png-bytes'), \
          patch('urllib.request.urlopen') as mock_urlopen:
         response = MagicMock()
         response.status = 204

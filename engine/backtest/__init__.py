@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from engine.backtest.metrics import (
     compute_max_drawdown,

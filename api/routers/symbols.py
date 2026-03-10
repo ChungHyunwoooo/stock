@@ -21,7 +21,6 @@ _cache: list[dict[str, str]] = []
 _cache_lock = threading.Lock()
 _cache_loaded = False
 
-
 def _load_kr() -> list[dict[str, str]]:
     """Load KRX listings via FinanceDataReader."""
     try:
@@ -39,7 +38,6 @@ def _load_kr() -> list[dict[str, str]]:
     except Exception as e:
         logger.warning("Failed to load KRX symbols: %s", e)
         return []
-
 
 def _load_us(exchange: str) -> list[dict[str, str]]:
     """Load US stock listings (NASDAQ or NYSE) via FinanceDataReader."""
@@ -59,7 +57,6 @@ def _load_us(exchange: str) -> list[dict[str, str]]:
         logger.warning("Failed to load %s symbols: %s", exchange, e)
         return []
 
-
 def _load_crypto() -> list[dict[str, str]]:
     """Load crypto trading pairs via ccxt (Binance)."""
     try:
@@ -75,7 +72,6 @@ def _load_crypto() -> list[dict[str, str]]:
     except Exception as e:
         logger.warning("Failed to load crypto symbols: %s", e)
         return []
-
 
 def _ensure_cache() -> None:
     """Populate the cache on first access (thread-safe)."""
@@ -93,17 +89,14 @@ def _ensure_cache() -> None:
         _cache_loaded = True
         logger.info("Symbol cache ready: %d total symbols", len(_cache))
 
-
 # ---------------------------------------------------------------------------
 # Public helpers (used by other routers, e.g. backtests/scan)
 # ---------------------------------------------------------------------------
-
 
 def get_symbols_by_market(market: str) -> list[dict[str, str]]:
     """Return all cached symbols for a given market."""
     _ensure_cache()
     return [item for item in _cache if item["market"] == market]
-
 
 def get_symbol_name(symbol: str, market: str | None = None) -> str:
     """Look up display name for a symbol. Returns symbol itself if not found."""
@@ -113,21 +106,17 @@ def get_symbol_name(symbol: str, market: str | None = None) -> str:
             return item["name"]
     return symbol
 
-
 # ---------------------------------------------------------------------------
 # API
 # ---------------------------------------------------------------------------
-
 
 class SymbolResult(BaseModel):
     symbol: str
     name: str
     market: str
 
-
 class SymbolSearchResponse(BaseModel):
     results: list[SymbolResult]
-
 
 @router.get("/search", response_model=SymbolSearchResponse)
 def search_symbols(

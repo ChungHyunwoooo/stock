@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +10,7 @@ from pathlib import Path
 
 import discord
 
-from engine.application.trading.control import TradingControlService
+from engine.application.trading.trading_control import TradingControlService
 from engine.interfaces.bootstrap import TradingRuntimeConfig, build_trading_runtime
 from engine.interfaces.discord.context import DiscordBotContext
 from engine.interfaces.discord.preferences import DiscordUserPreferenceStore
@@ -22,7 +23,6 @@ _bot: discord.Client | None = None
 _bot_thread: threading.Thread | None = None
 _bot_running = False
 
-
 def _load_bot_token() -> str | None:
     env_token = os.getenv("DISCORD_BOT_TOKEN")
     if env_token:
@@ -31,7 +31,6 @@ def _load_bot_token() -> str | None:
         return None
     data = json.loads(CONFIG_PATH.read_text())
     return data.get("bot_token")
-
 
 def create_bot(control: TradingControlService | None = None) -> discord.Client:
     runtime_control = control or build_trading_runtime(TradingRuntimeConfig()).control
@@ -68,7 +67,6 @@ def create_bot(control: TradingControlService | None = None) -> discord.Client:
 
     return client
 
-
 def run_bot_background(control: TradingControlService | None = None) -> bool:
     global _bot, _bot_thread, _bot_running
     if _bot_running:
@@ -95,7 +93,6 @@ def run_bot_background(control: TradingControlService | None = None) -> bool:
     _bot_thread = threading.Thread(target=_run, daemon=True)
     _bot_thread.start()
     return True
-
 
 def stop_bot() -> bool:
     global _bot_running

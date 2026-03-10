@@ -1,14 +1,11 @@
 """Grid search optimizer for strategy hyperparameters."""
 
-from __future__ import annotations
-
 import copy
 import itertools
 from dataclasses import dataclass
 
 from engine.backtest.runner import BacktestResult, BacktestRunner
 from engine.schema import StrategyDefinition
-
 
 @dataclass
 class OptimizationResult:
@@ -18,7 +15,6 @@ class OptimizationResult:
     @property
     def sharpe(self) -> float:
         return self.backtest_result.sharpe_ratio or float("-inf")
-
 
 def _set_nested(obj: dict, path: str, value: object) -> dict:
     """Set a value at a dot-separated path in a nested dict/list structure.
@@ -38,7 +34,6 @@ def _set_nested(obj: dict, path: str, value: object) -> dict:
     else:
         node[last] = value
     return obj
-
 
 class GridOptimizer:
     """Exhaustive grid search over strategy parameter combinations."""

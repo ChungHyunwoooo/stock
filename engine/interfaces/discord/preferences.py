@@ -1,11 +1,11 @@
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-
 class DiscordUserPreferenceStore:
-    def __init__(self, path: str | Path = 'config/discord_user_prefs.json') -> None:
+    def __init__(self, path: str | Path = 'state/discord_user_prefs.json') -> None:
         self.path = Path(path)
 
     def get_recent_exchange(self, user_id: int | str) -> str | None:

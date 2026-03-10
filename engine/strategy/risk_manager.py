@@ -6,13 +6,13 @@
   3. 연속 SL 제한 (연속 N회 SL 시 해당 심볼 일시 정지)
   4. 최대 동시 포지션 수 제한
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from engine.strategy.pattern_detector import PatternSignal
-
 
 @dataclass
 class RiskConfig:
@@ -22,7 +22,6 @@ class RiskConfig:
     max_consecutive_sl: int = 3            # 연속 SL 허용 횟수
     cooldown_bars_after_sl: int = 5        # SL 후 재진입 대기 봉 수
 
-
 @dataclass
 class SymbolState:
     open_positions: int = 0
@@ -30,7 +29,6 @@ class SymbolState:
     last_sl_bar: int = -999
     daily_pnl_pct: float = 0.0
     daily_trades: int = 0
-
 
 class RiskManager:
     def __init__(self, config: RiskConfig | None = None) -> None:

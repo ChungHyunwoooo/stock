@@ -4,12 +4,8 @@
   - _has_reversal_candle: 반전 캔들 확인
   - detect_pullback: 눌림목 패턴 감지
 """
-from __future__ import annotations
-
-from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 from engine.strategy.pattern_detector import (
     PatternSignal,
@@ -21,9 +17,7 @@ from engine.strategy.pullback_detector import (
     detect_pullback,
 )
 
-
 # ── 헬퍼 ────────────────────────────────────────────────────
-
 
 def _make_pullback_data(
     n: int = 100,
@@ -67,9 +61,7 @@ def _make_pullback_data(
 
     return opn, high, low, close, ema21, ema55
 
-
 # ── _has_reversal_candle ─────────────────────────────────────
-
 
 class TestHasReversalCandle:
     def test_returns_bool(self):
@@ -110,9 +102,7 @@ class TestHasReversalCandle:
         result = _has_reversal_candle(opn, high, low, close, i=n - 1, side="LONG", lookback=0)
         assert result is False
 
-
 # ── detect_pullback ──────────────────────────────────────────
-
 
 class TestDetectPullback:
     def test_returns_signal_or_none(self):

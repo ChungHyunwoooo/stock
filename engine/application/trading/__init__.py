@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from importlib import import_module
 
@@ -16,18 +15,17 @@ __all__ = [
 ]
 
 _MODULE_MAP = {
-    "AlertRuntimeConfig": "engine.application.trading.scanner",
-    "AlertScannerRuntime": "engine.application.trading.scanner",
+    "AlertRuntimeConfig": "engine.application.trading.signal_scanner",
+    "AlertScannerRuntime": "engine.application.trading.signal_scanner",
     "DefinitionSignalGenerator": "engine.application.trading.strategies",
     "PendingOrderNotFoundError": "engine.application.trading.exceptions",
-    "RecentSignalAnalysisService": "engine.application.trading.scanner",
+    "RecentSignalAnalysisService": "engine.application.trading.signal_scanner",
     "StrategyCatalog": "engine.application.trading.strategies",
-    "StrategyMonitorService": "engine.application.trading.monitor",
-    "TradingControlService": "engine.application.trading.control",
+    "StrategyMonitorService": "engine.application.trading.strategy_monitor",
+    "TradingControlService": "engine.application.trading.trading_control",
     "TradingOrchestrator": "engine.application.trading.orchestrator",
     "build_signal_presentation": "engine.application.trading.presenters",
 }
-
 
 def __getattr__(name: str):
     try:

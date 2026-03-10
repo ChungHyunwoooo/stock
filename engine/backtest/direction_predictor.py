@@ -9,11 +9,8 @@
   3. Structure — 최근 고점/저점의 상승/하락 패턴
   4. Multi-Signal — 1~3 복합 투표
 """
-from __future__ import annotations
 
 import numpy as np
-import talib
-
 
 def predict_momentum(close: np.ndarray, i: int, lookback: int = 20) -> str:
     """N봉 전 대비 수익률 방향.
@@ -29,7 +26,6 @@ def predict_momentum(close: np.ndarray, i: int, lookback: int = 20) -> str:
         return "SHORT"
     return "NEUTRAL"
 
-
 def predict_ema_cross(close: np.ndarray, i: int,
                       ema_fast: np.ndarray, ema_slow: np.ndarray) -> str:
     """EMA 단기/중기 교차 방향.
@@ -43,7 +39,6 @@ def predict_ema_cross(close: np.ndarray, i: int,
     elif ema_fast[i] < ema_slow[i]:
         return "SHORT"
     return "NEUTRAL"
-
 
 def predict_structure(high: np.ndarray, low: np.ndarray, i: int,
                       lookback: int = 20, order: int = 5) -> str:
@@ -82,7 +77,6 @@ def predict_structure(high: np.ndarray, low: np.ndarray, i: int,
     elif lower_highs and lower_lows:
         return "SHORT"
     return "NEUTRAL"
-
 
 def predict_multi(close: np.ndarray, high: np.ndarray, low: np.ndarray,
                   i: int, ema_fast: np.ndarray, ema_slow: np.ndarray) -> str:

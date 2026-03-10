@@ -7,10 +7,8 @@
   - CandleSignal 데이터 모델
   - CANDLE_PATTERNS 레지스트리
 """
-from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from engine.strategy.candle_patterns import (
     CANDLE_PATTERNS,
@@ -20,9 +18,7 @@ from engine.strategy.candle_patterns import (
     get_candle_bias,
 )
 
-
 # ── CANDLE_PATTERNS 레지스트리 ────────────────────────────────
-
 
 class TestCandlePatternRegistry:
     def test_has_21_patterns(self):
@@ -39,9 +35,7 @@ class TestCandlePatternRegistry:
         assert "CDLHAMMER" in CANDLE_PATTERNS
         assert "CDLSHOOTINGSTAR" in CANDLE_PATTERNS
 
-
 # ── CandleSignal 모델 ───────────────────────────────────────
-
 
 class TestCandleSignal:
     def test_creation(self):
@@ -52,9 +46,7 @@ class TestCandleSignal:
         assert sig.direction == "BULL"
         assert sig.importance == 2
 
-
 # ── scan_candle_patterns ─────────────────────────────────────
-
 
 def _make_bullish_engulfing(n: int = 50) -> tuple:
     """강한 양봉 장악형 데이터."""
@@ -75,7 +67,6 @@ def _make_bullish_engulfing(n: int = 50) -> tuple:
     high[-1] = 103.5
 
     return open_, high, low, close
-
 
 class TestScanCandlePatterns:
     def test_returns_list(self):
@@ -120,9 +111,7 @@ class TestScanCandlePatterns:
         )
         assert isinstance(result, list)
 
-
 # ── format_candle_signals ────────────────────────────────────
-
 
 class TestFormatCandleSignals:
     def test_empty_returns_default(self):
@@ -154,9 +143,7 @@ class TestFormatCandleSignals:
         result = format_candle_signals([sig])
         assert "***" in result
 
-
 # ── get_candle_bias ──────────────────────────────────────────
-
 
 class TestGetCandleBias:
     def test_empty_neutral(self):

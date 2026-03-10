@@ -1,14 +1,11 @@
 """Tests for engine/strategy/condition.py — condition evaluation logic."""
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from engine.schema import Condition, ConditionGroup, ConditionOp
-from engine.strategy.condition import evaluate_condition, evaluate_condition_group
-
+from engine.strategy.condition_evaluator import evaluate_condition, evaluate_condition_group
 
 @pytest.fixture
 def df() -> pd.DataFrame:
@@ -25,7 +22,6 @@ def df() -> pd.DataFrame:
         },
         index=idx,
     )
-
 
 # ---------------------------------------------------------------------------
 # crosses_above
@@ -44,7 +40,6 @@ def test_crosses_above_numeric(df):
     # Index 3: prev=35 > 30, not a cross => False
     assert not result.iloc[3]
 
-
 def test_crosses_below_numeric(df):
     """col_a crosses below 30 when it moves from >=30 to <30 (index 5)."""
     cond = Condition(left="col_a", op=ConditionOp.crosses_below, right=30)
@@ -54,7 +49,6 @@ def test_crosses_below_numeric(df):
     assert result.iloc[5] is True or result.iloc[5] == True
     # Index 2: col_a goes above 30, not below => False
     assert not result.iloc[2]
-
 
 def test_crosses_above_column(df):
     """col_a crosses above col_b (also 30) — should match numeric variant."""
@@ -66,7 +60,6 @@ def test_crosses_above_column(df):
 
     pd.testing.assert_series_equal(result_col.astype(bool), result_num.astype(bool), check_names=False)
 
-
 # ---------------------------------------------------------------------------
 # gt / lt / gte / lte / eq
 # ---------------------------------------------------------------------------
@@ -77,13 +70,11 @@ def test_gt_comparison(df):
     expected = df["col_a"] > 30
     pd.testing.assert_series_equal(result, expected)
 
-
 def test_lt_comparison(df):
     cond = Condition(left="col_a", op=ConditionOp.lt, right=30)
     result = evaluate_condition(df, cond)
     expected = df["col_a"] < 30
     pd.testing.assert_series_equal(result, expected)
-
 
 def test_gte_comparison(df):
     cond = Condition(left="col_a", op=ConditionOp.gte, right=35)
@@ -91,13 +82,11 @@ def test_gte_comparison(df):
     expected = df["col_a"] >= 35
     pd.testing.assert_series_equal(result, expected)
 
-
 def test_lte_comparison(df):
     cond = Condition(left="col_a", op=ConditionOp.lte, right=25)
     result = evaluate_condition(df, cond)
     expected = df["col_a"] <= 25
     pd.testing.assert_series_equal(result, expected)
-
 
 def test_eq_comparison(df):
     cond = Condition(left="col_a", op=ConditionOp.eq, right=40.0)
@@ -105,7 +94,6 @@ def test_eq_comparison(df):
     expected = df["col_a"] == 40.0
     pd.testing.assert_series_equal(result, expected)
     assert result.iloc[3]  # only index 3 equals 40
-
 
 # ---------------------------------------------------------------------------
 # ConditionGroup AND / OR
@@ -127,7 +115,6 @@ def test_condition_group_and(df):
     assert result.iloc[2]
     assert result.iloc[4]
     assert not result.iloc[3]  # 40 is not <40
-
 
 def test_condition_group_or(df):
     """OR: col_a < 15 OR col_a > 38 — only indices 0 and 3."""

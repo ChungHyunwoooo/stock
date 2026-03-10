@@ -1,12 +1,9 @@
-from __future__ import annotations
 
 import json
 import time
-from pathlib import Path
 from unittest.mock import patch
 
 from engine.data import provider_crypto
-
 
 def test_load_exchange_symbols_reads_fresh_file_cache(tmp_path):
     cache_dir = tmp_path / 'exchange_symbol_cache'

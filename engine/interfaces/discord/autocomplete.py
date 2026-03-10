@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -10,7 +11,6 @@ TIMEFRAME_CHOICES = ["all", "1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]
 MODE_CHOICES = ["alert_only", "semi_auto", "auto"]
 _DEFAULT_EXCHANGE = "binance"
 
-
 def _filter_choices(values: list[str], current: str, limit: int = 25) -> list[app_commands.Choice[str]]:
     needle = current.lower().strip()
     startswith_matches = [value for value in values if value.lower().startswith(needle)] if needle else values
@@ -19,14 +19,11 @@ def _filter_choices(values: list[str], current: str, limit: int = 25) -> list[ap
     matches = startswith_matches + contains_matches
     return [app_commands.Choice(name=value, value=value) for value in matches[:limit]]
 
-
 def _get_runtime_control(interaction):
     return getattr(getattr(interaction, 'client', None), 'runtime_control', None)
 
-
 def _get_preference_store(interaction):
     return getattr(getattr(interaction, 'client', None), 'user_preferences', None)
-
 
 def infer_exchange_from_symbol(symbol: str | None) -> str | None:
     if not symbol:
@@ -37,7 +34,6 @@ def infer_exchange_from_symbol(symbol: str | None) -> str | None:
     if any(quote in normalized for quote in ('/USDT', '/USDC', '/BTC', '/ETH')):
         return 'binance'
     return None
-
 
 def resolve_exchange_for_interaction(interaction, symbol_hint: str | None = None, explicit_exchange: str | None = None) -> str:
     if explicit_exchange and explicit_exchange.strip():
@@ -60,26 +56,21 @@ def resolve_exchange_for_interaction(interaction, symbol_hint: str | None = None
 
     return _DEFAULT_EXCHANGE
 
-
 async def exchange_autocomplete(interaction, current: str) -> list[app_commands.Choice[str]]:
     exchanges = get_supported_crypto_exchanges()
     resolved = resolve_exchange_for_interaction(interaction, symbol_hint=getattr(getattr(interaction, 'namespace', None), 'symbol', None), explicit_exchange=current or None)
     ordered = [resolved] + [value for value in exchanges if value != resolved]
     return _filter_choices(ordered, current)
 
-
 async def timeframe_autocomplete(_interaction, current: str) -> list[app_commands.Choice[str]]:
     return _filter_choices(TIMEFRAME_CHOICES, current)
-
 
 async def mode_autocomplete(_interaction, current: str) -> list[app_commands.Choice[str]]:
     return _filter_choices(MODE_CHOICES, current)
 
-
 async def symbol_autocomplete(interaction, current: str) -> list[app_commands.Choice[str]]:
     exchange = resolve_exchange_for_interaction(interaction, symbol_hint=current)
     return _filter_choices(_cached_symbols(exchange), current)
-
 
 async def pending_id_autocomplete(interaction, current: str) -> list[app_commands.Choice[str]]:
     control = _get_runtime_control(interaction)
@@ -93,7 +84,6 @@ async def pending_id_autocomplete(interaction, current: str) -> list[app_command
     ]
     choices = _filter_choices(values, current)
     return [app_commands.Choice(name=choice.name, value=choice.value.split(' | ', 1)[0]) for choice in choices]
-
 
 @lru_cache(maxsize=16)
 def _cached_symbols(exchange: str) -> list[str]:

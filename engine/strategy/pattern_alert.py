@@ -8,6 +8,7 @@
 
 설정: config/pattern_alert.json
 """
+
 from __future__ import annotations
 
 import io
@@ -15,9 +16,8 @@ import json
 import logging
 import threading
 import time
-from dataclasses import dataclass, field, asdict, fields as dc_fields
+from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
@@ -34,22 +34,22 @@ from engine.backtest.direction_predictor import (
     predict_multi,
     predict_structure,
 )
-from engine.data.base import get_provider
+from engine.data.provider_base import get_provider
 from engine.strategy.pattern_detector import (
     confirmed_before,
     find_local_extrema,
     scan_patterns,
 )
-from engine.strategy.candle_patterns import CandleSignal, scan_candle_patterns, format_candle_signals, get_candle_bias
+from engine.strategy.candle_patterns import CandleSignal, scan_candle_patterns, get_candle_bias
 from engine.strategy.pullback_detector import detect_pullback
 from engine.strategy.risk_manager import RiskConfig, RiskManager
 
 logger = logging.getLogger(__name__)
 
-from engine.config_path import config_file
+from engine.config_path import config_file, state_file
 
 CONFIG_PATH = config_file("pattern_alert.json")
-SENT_STATE_PATH = config_file("pattern_alert_sent.json")
+SENT_STATE_PATH = state_file("pattern_alert_sent.json")
 
 _running = False
 _thread: threading.Thread | None = None
@@ -58,7 +58,6 @@ _risk_manager: RiskManager | None = None
 _scan_count = 0
 _last_scan_at = ""
 _sent_state: dict[str, str] = {}  # "symbol:tf:pattern" → last_sent_time
-
 
 # ---------------------------------------------------------------------------
 # 설정
@@ -103,7 +102,6 @@ class PatternAlertConfig:
                 logger.warning("설정 로드 실패, 기본값 사용: %s", e)
         return cls()
 
-
 # ---------------------------------------------------------------------------
 # KRW 환율
 # ---------------------------------------------------------------------------
@@ -122,7 +120,6 @@ def _get_krw_rate(exchange: str = "binance") -> float:
     except Exception as e:
         logger.warning("환율 추정 실패: %s", e)
     return _config.krw_fallback_rate if _config else 1450.0
-
 
 # ---------------------------------------------------------------------------
 # 단일 심볼 멀티TF 분석
@@ -145,7 +142,6 @@ class TFResult:
     signals: list = field(default_factory=list)  # list[PatternSignal]
     candles: list = field(default_factory=list)  # list[CandleSignal]
     candle_bias: str = "NEUTRAL"  # 캔들 패턴 종합 방향
-
 
 def _analyze_tf(symbol: str, tf: str, exchange: str, lookback_days: int) -> TFResult | None:
     """단일 타임프레임 분석."""
@@ -231,7 +227,6 @@ def _analyze_tf(symbol: str, tf: str, exchange: str, lookback_days: int) -> TFRe
         logger.error("%s %s 분석 실패: %s", symbol, tf, e)
         return None
 
-
 def analyze_symbol(symbol: str, config: PatternAlertConfig) -> list[TFResult]:
     """심볼의 멀티 타임프레임 분석."""
     tf_days = {"5m": 5, "15m": 10, "30m": 15, "1h": 30, "4h": 90}
@@ -242,7 +237,6 @@ def analyze_symbol(symbol: str, config: PatternAlertConfig) -> list[TFResult]:
         if result:
             results.append(result)
     return results
-
 
 # ---------------------------------------------------------------------------
 # 차트 생성
@@ -332,7 +326,6 @@ def _generate_chart(symbol: str, results: list[TFResult], krw_rate: float) -> by
     plt.close(fig)
     buf.seek(0)
     return buf.read()
-
 
 # ---------------------------------------------------------------------------
 # 디스코드 전송
@@ -441,7 +434,6 @@ def _build_message(symbol: str, results: list[TFResult], krw_rate: float) -> str
 
     return "\n".join(lines)
 
-
 def _fmt_krw(value: float) -> str:
     """가격대별 KRW 포맷. 고가: 정수, 저가: 소수점 유지."""
     if value >= 1000:
@@ -452,7 +444,6 @@ def _fmt_krw(value: float) -> str:
         return f"{value:,.2f}원"
     else:
         return f"{value:,.4f}원"
-
 
 def _send_discord(webhook_url: str, message: str, chart_bytes: bytes | None = None) -> bool:
     """디스코드 웹훅 전송."""
@@ -477,7 +468,6 @@ def _send_discord(webhook_url: str, message: str, chart_bytes: bytes | None = No
         logger.error("디스코드 전송 에러: %s", e)
     return False
 
-
 # ---------------------------------------------------------------------------
 # 중복 방지
 # ---------------------------------------------------------------------------
@@ -490,11 +480,9 @@ def _load_sent_state() -> None:
         except Exception:
             _sent_state = {}
 
-
 def _save_sent_state() -> None:
     SENT_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     SENT_STATE_PATH.write_text(json.dumps(_sent_state, indent=2))
-
 
 def _should_send(symbol: str, results: list[TFResult], cooldown_sec: int) -> bool:
     """쿨다운 내 동일 신호 중복 방지."""
@@ -509,7 +497,6 @@ def _should_send(symbol: str, results: list[TFResult], cooldown_sec: int) -> boo
             pass
     _sent_state[sig_key] = str(time.time())
     return True
-
 
 # ---------------------------------------------------------------------------
 # 알림 조건 판단
@@ -527,7 +514,6 @@ def _is_alertable(results: list[TFResult]) -> bool:
 
     return False
 
-
 # ---------------------------------------------------------------------------
 # 메인 루프
 # ---------------------------------------------------------------------------
@@ -543,7 +529,6 @@ def _resolve_symbols(config: PatternAlertConfig) -> tuple[list[str], str]:
         symbols = get_top_symbols(config.ranking_count)
         return symbols, "upbit"
     return config.symbols, config.exchange
-
 
 def _scan_once(config: PatternAlertConfig) -> list[dict]:
     """전체 심볼 1회 스캔. 알림 발송된 결과 목록 반환."""
@@ -612,7 +597,6 @@ def _scan_once(config: PatternAlertConfig) -> list[dict]:
     logger.info("패턴 스캔 #%d 완료 (%d 알림)", _scan_count, len(sent_results))
     return sent_results
 
-
 def _loop() -> None:
     """데몬 루프."""
     global _running, _config
@@ -632,7 +616,6 @@ def _loop() -> None:
             if not _running:
                 break
             time.sleep(1)
-
 
 # ---------------------------------------------------------------------------
 # 공개 API
@@ -658,7 +641,6 @@ def start(config: PatternAlertConfig | None = None) -> None:
     _thread.start()
     logger.info("패턴 스캐너 시작: %d 심볼, %ds 간격", len(_config.symbols), _config.scan_interval_sec)
 
-
 def stop() -> None:
     """스캐너 중지."""
     global _running, _thread
@@ -668,12 +650,10 @@ def stop() -> None:
         _thread = None
     logger.info("패턴 스캐너 중지")
 
-
 def scan_now(config: PatternAlertConfig | None = None) -> list[dict]:
     """즉시 1회 스캔. 알림된 결과 반환."""
     cfg = config or _config or PatternAlertConfig.load()
     return _scan_once(cfg)
-
 
 def analyze_single(symbol: str, config: PatternAlertConfig | None = None) -> tuple[list[TFResult], str, float]:
     """단일 심볼 분석 (Discord 메뉴얼 스캔용).
@@ -700,11 +680,9 @@ def analyze_single(symbol: str, config: PatternAlertConfig | None = None) -> tup
     message = _build_message(symbol, results, krw_rate) if results else f"{symbol}: 분석 데이터 없음"
     return results, message, krw_rate
 
-
 def generate_chart_for_symbol(symbol: str, results: list[TFResult], krw_rate: float) -> bytes | None:
     """외부에서 차트 생성 호출용 래퍼."""
     return _generate_chart(symbol, results, krw_rate)
-
 
 def status() -> dict:
     """현재 상태."""
@@ -714,7 +692,6 @@ def status() -> dict:
         "last_scan_at": _last_scan_at,
         "config": asdict(_config) if _config else None,
     }
-
 
 def update_config(**kwargs) -> PatternAlertConfig:
     """설정 업데이트."""

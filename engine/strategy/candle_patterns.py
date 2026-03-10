@@ -3,7 +3,6 @@
 61종 중 신뢰도 높은 패턴만 선별.
 구조적 패턴(쌍바닥/삼각형)의 보조 확인 역할.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -39,7 +38,6 @@ CANDLE_PATTERNS: dict[str, tuple[str, int]] = {
     "CDLBELTHOLD": ("벨트홀드", 1),
 }
 
-
 @dataclass
 class CandleSignal:
     name: str       # 함수명 (e.g. "CDLENGULFING")
@@ -47,7 +45,6 @@ class CandleSignal:
     direction: str  # "BULL" | "BEAR"
     strength: int   # TA-Lib 값 (100=일반, 200=확인됨)
     importance: int  # 1~3
-
 
 def scan_candle_patterns(
     open_: np.ndarray,
@@ -108,7 +105,6 @@ def scan_candle_patterns(
 
     return unique
 
-
 def format_candle_signals(signals: list[CandleSignal]) -> str:
     """디스코드 메시지용 포맷."""
     if not signals:
@@ -120,7 +116,6 @@ def format_candle_signals(signals: list[CandleSignal]) -> str:
         icon = "▲" if s.direction == "BULL" else "▼"
         parts.append(f"{icon}{s.kr_name}({star})")
     return " ".join(parts)
-
 
 def get_candle_bias(signals: list[CandleSignal]) -> tuple[str, float]:
     """캔들 패턴 종합 방향 + 확신도.

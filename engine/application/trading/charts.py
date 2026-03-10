@@ -1,8 +1,5 @@
-"""Unified chart generation for all outputs (scan alerts, /analysis command).
+"""Unified chart generation for all outputs (scan alerts, /analysis command)."""
 
-Single source of truth: delegates to strategy-specific chart generation
-from upbit_scanner.generate_chart() to ensure visual consistency.
-"""
 from __future__ import annotations
 
 import io
@@ -12,14 +9,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mplfinance as mpf
-import numpy as np
 import pandas as pd
 import talib
 
-from engine.alerts.discord import Signal
+from engine.notifications.alert_discord import Signal
 from engine.application.trading.reports import AnalysisReport
-from engine.data.base import get_provider
-from engine.domain.trading.models import TradingSignal
+from engine.data.provider_base import get_provider
+from engine.core.models import TradingSignal
 from engine.schema import MarketType
 
 logger = logging.getLogger(__name__)
@@ -34,7 +30,6 @@ _LOOKBACK = {
     '1d': pd.Timedelta(days=180),
     '1w': pd.Timedelta(days=720),
 }
-
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -52,7 +47,6 @@ def build_signal_chart(signal: TradingSignal) -> bytes | None:
     except Exception as exc:
         logger.warning('Signal chart generation failed for %s: %s', signal.symbol, exc)
         return None
-
 
 def build_analysis_chart(report: AnalysisReport) -> bytes | None:
     """Generate chart for an AnalysisReport.
@@ -76,7 +70,6 @@ def build_analysis_chart(report: AnalysisReport) -> bytes | None:
         logger.warning('Analysis chart generation failed for %s: %s', report.symbol, exc)
         return None
 
-
 # ---------------------------------------------------------------------------
 # Signal type converter
 # ---------------------------------------------------------------------------
@@ -95,8 +88,6 @@ def _to_alert_signal(signal: TradingSignal) -> Signal:
         reason=signal.reason,
         metadata=dict(signal.metadata),
     )
-
-
 
 def _generate_basic_chart(
     df: pd.DataFrame,
@@ -137,7 +128,6 @@ def _generate_basic_chart(
     )
     return _save_chart(fig)
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -156,7 +146,6 @@ def _chart_style():
         gridcolor='#333333',
     )
 
-
 def _save_chart(fig) -> bytes:
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=120, bbox_inches='tight',
@@ -164,7 +153,6 @@ def _save_chart(fig) -> bytes:
     plt.close(fig)
     buf.seek(0)
     return buf.read()
-
 
 def _market_for_symbol(symbol: str) -> MarketType:
     normalized = symbol.upper()
@@ -174,11 +162,9 @@ def _market_for_symbol(symbol: str) -> MarketType:
         return MarketType.kr_stock
     return MarketType.us_stock
 
-
 def _exchange_for_symbol(symbol: str) -> str:
     normalized = symbol.upper()
     return 'upbit' if normalized.startswith('KRW-') else 'binance'
-
 
 def _fetch_chart_frame(symbol: str, timeframe: str, exchange: str) -> pd.DataFrame:
     market = _market_for_symbol(symbol)

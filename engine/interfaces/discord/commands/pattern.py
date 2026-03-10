@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import io
@@ -7,10 +8,10 @@ import discord
 import pandas as pd
 from discord import Interaction, app_commands
 
-from engine.analysis.chart_patterns import ChartPattern, detect_chart_patterns
+from engine.patterns.chart_patterns import ChartPattern, detect_chart_patterns
 from engine.application.trading.charts import build_analysis_chart
-from engine.application.trading.scanner import RecentSignalAnalysisService
-from engine.data.base import get_provider
+from engine.application.trading.signal_scanner import RecentSignalAnalysisService
+from engine.data.provider_base import get_provider
 from engine.interfaces.discord.autocomplete import (
     exchange_autocomplete,
     resolve_exchange_for_interaction,
@@ -34,7 +35,6 @@ _DIRECTION_COLOR = {
 }
 
 _ALL_TFS = ["15m", "1h", "4h", "1d"]
-
 
 def _pattern_embed(pattern: ChartPattern, symbol: str, timeframe: str, exchange: str) -> discord.Embed:
     ticker = symbol.replace("KRW-", "").replace("/USDT", "").replace("/KRW", "")
@@ -61,7 +61,6 @@ def _pattern_embed(pattern: ChartPattern, symbol: str, timeframe: str, exchange:
 
     embed.set_footer(text=f"{exchange} | {timeframe}")
     return embed
-
 
 class PatternCommandPlugin:
     name = "pattern"
@@ -165,7 +164,6 @@ class PatternCommandPlugin:
                 embeds.append(embed)
 
             await interaction.followup.send(embeds=embeds[:10], files=files)
-
 
 def _market_for_symbol(symbol: str):
     from engine.schema import MarketType  # lazy to avoid circular import

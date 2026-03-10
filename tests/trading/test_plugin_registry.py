@@ -1,12 +1,10 @@
-from __future__ import annotations
 
 import discord
 
-from engine.infrastructure.notifications import MemoryNotifier
+from engine.notifications import MemoryNotifier
 from engine.interfaces.discord.context import DiscordBotContext
 from engine.interfaces.discord.registry import register_default_commands
-from engine.plugins import broker_plugins, notifier_plugins, runtime_store_plugins, strategy_source_plugins
-
+from engine.strategy.plugin_runtime import broker_plugins, notifier_plugins, runtime_store_plugins, strategy_source_plugins
 
 class DummyControl:
     def get_state(self):
@@ -36,7 +34,6 @@ class DummyControl:
     def reject_pending(self, _pending_id):
         return self.get_state()
 
-
 def test_runtime_plugin_registries_expose_defaults(tmp_path):
     assert "paper" in broker_plugins.names()
     assert "discord_webhook" in notifier_plugins.names()
@@ -52,7 +49,6 @@ def test_runtime_plugin_registries_expose_defaults(tmp_path):
     assert isinstance(notifier, MemoryNotifier)
     assert broker is not None
     assert source is not None
-
 
 def test_discord_command_registry_registers_all_groups():
     client = discord.Client(intents=discord.Intents.none())

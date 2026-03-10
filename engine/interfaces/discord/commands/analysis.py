@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import io
@@ -13,7 +14,7 @@ from engine.application.trading.presenters import (
     build_analysis_report_presentation,
     build_signal_presentation,
 )
-from engine.application.trading.scanner import RecentSignalAnalysisService
+from engine.application.trading.signal_scanner import RecentSignalAnalysisService
 from engine.interfaces.discord.autocomplete import (
     exchange_autocomplete,
     resolve_exchange_for_interaction,
@@ -21,7 +22,6 @@ from engine.interfaces.discord.autocomplete import (
     timeframe_autocomplete,
 )
 from engine.interfaces.discord.context import DiscordBotContext
-
 
 def _embed_from_signal(presentation) -> discord.Embed:
     """SignalPresentation → discord.Embed (scan 포맷 통일)."""
@@ -35,7 +35,6 @@ def _embed_from_signal(presentation) -> discord.Embed:
     embed.set_footer(text=presentation.footer)
     return embed
 
-
 def _embed_from_report(presentation) -> discord.Embed:
     """ReportPresentation → discord.Embed."""
     embed = discord.Embed(title=presentation.title, color=presentation.color)
@@ -43,7 +42,6 @@ def _embed_from_report(presentation) -> discord.Embed:
         embed.add_field(name=field.name, value=field.value, inline=field.inline)
     embed.set_footer(text=presentation.footer)
     return embed
-
 
 class AnalysisCommandPlugin:
     name = 'analysis'

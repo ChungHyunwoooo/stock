@@ -1,11 +1,9 @@
 """FastAPI application entry point for the Trading Strategy Engine."""
 
-from __future__ import annotations
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import alerts, backtests, bot, knowledge, regime, screener, strategies, symbols
+from api.routers import alerts, backtests, bot_config, knowledge, regime, screener, strategies, symbols
 
 app = FastAPI(
     title="Trading Strategy Engine API",
@@ -20,10 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.on_event("startup")
 def startup() -> None:
-    from engine.store.database import init_db
+    from engine.core.database import init_db
     from engine.data.provider_crypto import warm_exchange_symbol_caches
     init_db()
     warm_exchange_symbol_caches()
@@ -34,7 +31,6 @@ def startup() -> None:
     run_bot_background()
     run_alert_scanner_background()
 
-
 app.include_router(strategies.router, prefix="/api")
 app.include_router(backtests.router, prefix="/api")
 app.include_router(knowledge.router, prefix="/api")
@@ -42,8 +38,7 @@ app.include_router(symbols.router, prefix="/api")
 app.include_router(regime.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(screener.router, prefix="/api")
-app.include_router(bot.router, prefix="/api")
-
+app.include_router(bot_config.router, prefix="/api")
 
 @app.get("/api/health", tags=["system"])
 def health() -> dict:

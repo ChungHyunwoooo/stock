@@ -3,12 +3,11 @@
 상위 TF 트렌드 방향 확인 → 하위 TF 진입 시점 포착.
 D1 트렌드 + 4H 구조 + 1H/15m 진입.
 """
-from __future__ import annotations
 
 import pandas as pd
 
-from engine.analysis.market_structure import detect_market_structure
-from engine.analysis.trend_strength import calc_adx_filter
+from engine.patterns.market_structure import detect_market_structure
+from engine.patterns.trend_strength import calc_adx_filter
 
 # TF 가중치 정의
 _TF_WEIGHTS: dict[str, float] = {
@@ -27,7 +26,6 @@ _DEFAULT_RESULT: dict = {
     "h1_trigger": False,
 }
 
-
 def _score_trend(trend: str, side: str) -> float:
     """트렌드 방향과 진입 방향 일치도 점수 반환."""
     if side == "LONG":
@@ -35,11 +33,9 @@ def _score_trend(trend: str, side: str) -> float:
     else:  # SHORT
         return {"BEARISH": 1.0, "RANGING": 0.3, "BULLISH": 0.0}.get(trend, 0.0)
 
-
 def _calc_ema21(series: pd.Series) -> pd.Series:
     """EMA21 계산 (pandas ewm, talib 미사용)."""
     return series.ewm(span=21, adjust=False).mean()
-
 
 def _check_h1_trigger(df: pd.DataFrame, side: str) -> bool:
     """1H 트리거 조건 확인.
@@ -65,7 +61,6 @@ def _check_h1_trigger(df: pd.DataFrame, side: str) -> bool:
         lower_high = (recent_highs[-1] < recent_highs[-2]) and (recent_highs[-2] < recent_highs[-3])
         below_ema = curr_close < curr_ema
         return lower_high and below_ema
-
 
 def calc_mtf_confluence(
     frames: dict[str, pd.DataFrame],

@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from unittest.mock import patch
 
@@ -6,11 +5,10 @@ import numpy as np
 import pandas as pd
 
 from engine.application.trading import StrategyMonitorService, TradingOrchestrator
-from engine.infrastructure.execution import PaperBroker
-from engine.infrastructure.notifications import MemoryNotifier
-from engine.infrastructure.runtime import JsonRuntimeStore
+from engine.execution import PaperBroker
+from engine.notifications import MemoryNotifier
+from engine.core import JsonRuntimeStore
 from engine.schema import Condition, ConditionGroup, ConditionOp, IndicatorDef, RiskParams, StrategyDefinition
-
 
 def make_df() -> pd.DataFrame:
     index = pd.date_range("2024-01-01", periods=20, freq="D")
@@ -25,7 +23,6 @@ def make_df() -> pd.DataFrame:
         },
         index=index,
     )
-
 
 def test_monitor_service_evaluates_strategy_and_routes_signal(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")
@@ -56,7 +53,7 @@ def test_monitor_service_evaluates_strategy_and_routes_signal(tmp_path):
     mock_provider = type("MockProvider", (), {"fetch_ohlcv": lambda self, *args, **kwargs: df})()
 
     with (
-        patch("engine.application.trading.monitor.get_provider", return_value=mock_provider),
+        patch("engine.application.trading.strategy_monitor.get_provider", return_value=mock_provider),
         patch("engine.indicators.compute.get_indicator", return_value=lambda _df, **_kw: rsi_values),
     ):
         signal = monitor.evaluate_strategy(

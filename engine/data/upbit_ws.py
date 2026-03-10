@@ -16,11 +16,9 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime, timezone
 from typing import Callable
 
 logger = logging.getLogger(__name__)
-
 
 class CandleBoundaryDetector:
     """5분 캔들 경계 감지기.
@@ -59,7 +57,6 @@ class CandleBoundaryDetector:
     @property
     def last_boundary(self) -> int:
         return self._last_boundary
-
 
 class UpbitWebSocketManager:
     """Upbit WebSocket 매니저.

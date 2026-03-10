@@ -1,12 +1,9 @@
 """FinanceDataReader-based data provider for KR/US stocks."""
 
-from __future__ import annotations
-
 import pandas as pd
 import FinanceDataReader as fdr
 
-from engine.data.base import DataProvider
-
+from engine.data.provider_base import DataProvider
 
 class FDRProvider(DataProvider):
     """Data provider for Korean and US stock markets using FinanceDataReader."""

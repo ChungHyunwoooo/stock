@@ -1,11 +1,9 @@
-from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock, patch
 
-from engine.domain.trading import SignalAction, TradeSide, TradingSignal
-from engine.infrastructure.notifications.discord_webhook import DiscordWebhookNotifier
-
+from engine.core import SignalAction, TradeSide, TradingSignal
+from engine.notifications.discord_webhook import DiscordWebhookNotifier
 
 def test_notifier_uses_timeframe_specific_webhook(tmp_path):
     config_path = tmp_path / "discord.json"

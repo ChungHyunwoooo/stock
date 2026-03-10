@@ -1,12 +1,9 @@
 """Compute technical indicators on a DataFrame using ta-lib."""
 
-from __future__ import annotations
-
 import pandas as pd
 
 from engine.indicators.registry import get_indicator
 from engine.schema import IndicatorDef
-
 
 def compute_indicator(df: pd.DataFrame, indicator_def: IndicatorDef) -> pd.DataFrame:
     """Compute a single indicator and add result columns to df.
@@ -53,7 +50,6 @@ def compute_indicator(df: pd.DataFrame, indicator_def: IndicatorDef) -> pd.DataF
                 df[alias] = result[talib_name]
 
     return df
-
 
 def compute_all_indicators(df: pd.DataFrame, indicators: list[IndicatorDef]) -> pd.DataFrame:
     """Compute all indicators sequentially and return enriched DataFrame."""

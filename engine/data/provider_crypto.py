@@ -1,7 +1,5 @@
 """CCXT-based data provider for crypto spot and futures markets."""
 
-from __future__ import annotations
-
 import json
 import threading
 import time
@@ -11,7 +9,7 @@ from pathlib import Path
 import ccxt
 import pandas as pd
 
-from engine.data.base import DataProvider
+from engine.data.provider_base import DataProvider
 
 _TIMEFRAME_MAP: dict[str, str] = {
     "1m": "1m",
@@ -29,7 +27,6 @@ _DEFAULT_EXCHANGES = ["binance", "bybit", "okx", "upbit"]
 _SYMBOL_CACHE_DIR = Path("config/exchange_symbol_cache")
 _SYMBOL_CACHE_TTL_SEC = 60 * 60 * 12
 _PRELOAD_STARTED = False
-
 
 class CryptoProvider(DataProvider):
     """Data provider for crypto markets using ccxt."""
@@ -75,24 +72,20 @@ class CryptoProvider(DataProvider):
         df = df[df.index <= pd.Timestamp(end, tz="UTC")]
         return df
 
-
 @lru_cache(maxsize=16)
 def _build_exchange(exchange: str) -> ccxt.Exchange:
     exchange_class = getattr(ccxt, exchange)
     return exchange_class()
 
-
 def get_supported_crypto_exchanges() -> list[str]:
     exchanges = [name for name in _DEFAULT_EXCHANGES if hasattr(ccxt, name)]
     return sorted(exchanges)
-
 
 def load_exchange_symbols(exchange: str) -> list[str]:
     cached = _load_cached_symbols(exchange)
     if cached is not None:
         return cached
     return _refresh_exchange_symbols(exchange)
-
 
 def warm_exchange_symbol_caches(exchanges: list[str] | None = None) -> None:
     global _PRELOAD_STARTED
@@ -110,14 +103,12 @@ def warm_exchange_symbol_caches(exchanges: list[str] | None = None) -> None:
 
     threading.Thread(target=_run, daemon=True).start()
 
-
 def _refresh_exchange_symbols(exchange: str) -> list[str]:
     client = _build_exchange(exchange)
     markets = client.load_markets()
     symbols = sorted(markets.keys())
     _write_symbol_cache(exchange, symbols)
     return symbols
-
 
 def _load_cached_symbols(exchange: str) -> list[str] | None:
     path = _symbol_cache_path(exchange)
@@ -135,12 +126,10 @@ def _load_cached_symbols(exchange: str) -> list[str] | None:
         return None
     return None
 
-
 def _write_symbol_cache(exchange: str, symbols: list[str]) -> None:
     path = _symbol_cache_path(exchange)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"cached_at": time.time(), "symbols": symbols}))
-
 
 def _symbol_cache_path(exchange: str) -> Path:
     return _SYMBOL_CACHE_DIR / f"{exchange}.json"

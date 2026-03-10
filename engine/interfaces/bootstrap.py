@@ -1,28 +1,26 @@
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from engine.application.trading.control import TradingControlService
+from engine.application.trading.trading_control import TradingControlService
 from engine.application.trading.orchestrator import TradingOrchestrator
-from engine.plugins import broker_plugins, notifier_plugins, runtime_store_plugins
-
+from engine.strategy.plugin_runtime import broker_plugins, notifier_plugins, runtime_store_plugins
 
 @dataclass(slots=True)
 class TradingRuntimeConfig:
-    state_path: str | Path = "config/runtime_state.json"
+    state_path: str | Path = "state/runtime_state.json"
     broker_plugin: str = "paper"
     notifier_plugin: str = "discord_webhook"
     runtime_store_plugin: str = "json"
     discord_config_path: str | Path = "config/discord.json"
-
 
 @dataclass(slots=True)
 class TradingRuntime:
     orchestrator: TradingOrchestrator
     control: TradingControlService
     config: TradingRuntimeConfig
-
 
 def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> TradingRuntime:
     runtime_config = config or TradingRuntimeConfig()

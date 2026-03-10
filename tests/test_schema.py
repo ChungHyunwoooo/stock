@@ -1,7 +1,5 @@
 """Tests for engine/schema.py — StrategyDefinition validation and serialization."""
 
-from __future__ import annotations
-
 import json
 import pathlib
 
@@ -20,12 +18,11 @@ from engine.schema import (
     StrategyStatus,
 )
 
-STRATEGIES_DIR = pathlib.Path(__file__).parent.parent / "strategies" / "active"
-
+STRATEGIES_DIR = pathlib.Path(__file__).parent.parent / "strategies"
 
 def test_valid_strategy_from_json():
-    """Load momentum_rsi_macd_v1.json and parse with StrategyDefinition."""
-    json_path = STRATEGIES_DIR / "momentum_rsi_macd_v1.json"
+    """Load rsi_macd_momentum definition.json and parse with StrategyDefinition."""
+    json_path = STRATEGIES_DIR / "rsi_macd_momentum" / "definition.json"
     assert json_path.exists(), f"Strategy file not found: {json_path}"
 
     raw = json_path.read_text(encoding="utf-8")
@@ -43,7 +40,6 @@ def test_valid_strategy_from_json():
     assert strategy.risk.stop_loss_pct == pytest.approx(0.03)
     assert strategy.risk.take_profit_pct == pytest.approx(0.09)
 
-
 def test_invalid_strategy_missing_fields():
     """Validation should fail when required fields are absent."""
     # Missing 'markets' and 'indicators' — both are required with min_length=1
@@ -59,7 +55,6 @@ def test_invalid_strategy_missing_fields():
     field_names = {e["loc"][0] for e in errors}
     assert "markets" in field_names or "indicators" in field_names
 
-
 def test_strategy_serialization_roundtrip(sample_strategy):
     """model_dump_json -> model_validate_json should preserve all fields."""
     json_str = sample_strategy.model_dump_json()
@@ -73,7 +68,6 @@ def test_strategy_serialization_roundtrip(sample_strategy):
     assert restored.risk.stop_loss_pct == sample_strategy.risk.stop_loss_pct
     assert restored.risk.take_profit_pct == sample_strategy.risk.take_profit_pct
 
-
 def test_strategy_status_enum():
     """All StrategyStatus values should be parseable."""
     statuses = ["draft", "testing", "active", "archived"]
@@ -84,7 +78,6 @@ def test_strategy_status_enum():
 
     with pytest.raises(ValueError):
         StrategyStatus("invalid_status")
-
 
 def test_condition_ops():
     """All ConditionOp values should exist and be usable in a Condition."""

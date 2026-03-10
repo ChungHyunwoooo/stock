@@ -1,14 +1,12 @@
 """전략 백테스트 공통 모듈 — 데이터 타입, 데이터 로딩, 메트릭 계산."""
+
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 
-import numpy as np
 import pandas as pd
 
-from engine.data.base import get_provider
-
+from engine.data.provider_base import get_provider
 
 @dataclass
 class StrategyTrade:
@@ -21,7 +19,6 @@ class StrategyTrade:
     exit_reason: str  # "TP" | "SL" | "TIME" | "END"
     pnl_pct: float  # 레버리지·수수료 반영 후 %
     market_regime: str  # "BULL" | "BEAR" | "RANGE"
-
 
 @dataclass
 class StrategyResult:
@@ -39,7 +36,6 @@ class StrategyResult:
     profit_factor: float
     trades: list[StrategyTrade] = field(default_factory=list)
 
-
 def load_ohlcv(symbol: str, start: str, end: str, timeframe: str,
                lookback_bars: int = 300, exchange: str = "binance") -> pd.DataFrame:
     """OHLCV 데이터 로드. lookback 포함."""
@@ -50,7 +46,6 @@ def load_ohlcv(symbol: str, start: str, end: str, timeframe: str,
     if df.empty:
         raise ValueError(f"{symbol} {timeframe} 데이터 없음")
     return df
-
 
 def detect_regime(df_1d: pd.DataFrame) -> str:
     """D1 EMA200 기반 시장 레짐 판단."""
@@ -66,7 +61,6 @@ def detect_regime(df_1d: pd.DataFrame) -> str:
     elif pct < -0.02:
         return "BEAR"
     return "RANGE"
-
 
 def calc_metrics(trades: list[StrategyTrade]) -> StrategyResult | None:
     """트레이드 리스트 → 메트릭 집계."""
@@ -98,7 +92,6 @@ def calc_metrics(trades: list[StrategyTrade]) -> StrategyResult | None:
         trades=trades,
     )
 
-
 def get_start_idx(df: pd.DataFrame, start: str) -> int:
     """백테스트 시작 인덱스 (워밍업 후)."""
     start_ts = pd.Timestamp(start, tz="UTC")
@@ -107,7 +100,6 @@ def get_start_idx(df: pd.DataFrame, start: str) -> int:
         raise ValueError(f"{start} 이후 데이터 없음")
     idx = int(mask.argmax())
     return max(idx, 200)  # 최소 200봉 워밍업
-
 
 def _tf_to_timedelta(tf: str) -> pd.Timedelta:
     mapping = {

@@ -7,9 +7,8 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from engine.alerts.bot_config import BotConfig
-from engine.alerts.positions import PositionTracker
-from engine.alerts.discord import send_signal
+from engine.notifications.alert_bot_config import BotConfig
+from engine.notifications.alert_positions import PositionTracker
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +27,14 @@ _last_position_check: float = 0
 _alert_history: list[dict] = []     # max 100 recent alerts
 _start_time: float = 0
 
-
 def _in_cooldown(sig) -> bool:
     key = f"{sig.symbol}:{sig.strategy}"
     last = _cooldowns.get(key, 0)
     return (time.time() - last) < _config.cooldown_sec
 
-
 def _record_cooldown(sig) -> None:
     key = f"{sig.symbol}:{sig.strategy}"
     _cooldowns[key] = time.time()
-
 
 def _add_alert_history(alert_type: str, obj) -> None:
     from datetime import datetime, timezone
@@ -54,7 +50,6 @@ def _add_alert_history(alert_type: str, obj) -> None:
     if len(_alert_history) > 100:
         _alert_history.pop()
 
-
 def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
     """Fetch latest prices using ccxt."""
     import ccxt
@@ -66,15 +61,13 @@ def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
         logger.warning("Price fetch error: %s", e)
         return {}
 
-
 def _send_position_alert(alert) -> None:
     """Send position alert to Discord."""
     try:
-        from engine.alerts.discord import send_position_alert
+        from engine.notifications.alert_discord import send_position_alert
         send_position_alert(alert)
     except Exception as e:
         logger.warning("Position alert send error: %s", e)
-
 
 async def _bot_loop() -> None:
     global _last_scan, _last_position_check
@@ -85,7 +78,7 @@ async def _bot_loop() -> None:
             # 1) Signal scan
             if now - _last_scan >= _config.scan_interval_sec:
                 from engine.strategy.scanner import run_scan
-                from engine.regime.crypto import CryptoRegimeEngine
+                from engine.analysis.crypto_regime import CryptoRegimeEngine
 
                 regime = "SELECTIVE"
                 try:
@@ -135,7 +128,6 @@ async def _bot_loop() -> None:
 
         await asyncio.sleep(30)
 
-
 def start() -> bool:
     global _task, _running, _config, _tracker, _start_time
     if _running:
@@ -153,7 +145,6 @@ def start() -> bool:
     logger.info("Bot started (scan every %ds, position check every %ds)", _config.scan_interval_sec, _config.position_check_sec)
     return True
 
-
 def stop() -> bool:
     global _task, _running
     if not _running:
@@ -167,10 +158,8 @@ def stop() -> bool:
     logger.info("Bot stopped")
     return True
 
-
 def is_running() -> bool:
     return _running
-
 
 def status() -> dict:
     return {
@@ -183,18 +172,14 @@ def status() -> dict:
         "uptime_sec": int(time.time() - _start_time) if _running else 0,
     }
 
-
 def get_config() -> BotConfig | None:
     return _config
-
 
 def get_tracker() -> PositionTracker | None:
     return _tracker
 
-
 def get_alert_history() -> list[dict]:
     return list(_alert_history)
-
 
 def update_config(data: dict) -> BotConfig:
     global _config

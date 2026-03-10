@@ -1,7 +1,5 @@
 """Integration tests — end-to-end flows across store, backtest, and schema."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -11,29 +9,26 @@ import pandas as pd
 import pytest
 
 from engine.schema import StrategyDefinition
-from engine.store.database import get_engine, get_session, init_db
-from engine.store.models import BacktestRecord
-from engine.store.repository import BacktestRepository, StrategyRepository
-
+from engine.core.database import get_engine, get_session, init_db
+from engine.core.db_models import BacktestRecord
+from engine.core.repository import BacktestRepository, StrategyRepository
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-STRATEGY_JSON_PATH = Path(__file__).parent.parent / "strategies" / "active" / "momentum_rsi_macd_v1.json"
+STRATEGY_JSON_PATH = Path(__file__).parent.parent / "strategies" / "rsi_macd_momentum" / "definition.json"
 
 _IN_MEMORY_URL = "sqlite:///:memory:"
-
 
 @pytest.fixture(autouse=True)
 def _reset_engine():
     """Reset the module-level singleton between tests."""
-    import engine.store.database as db_module
+    import engine.core.database as db_module
     original = db_module._engine
     db_module._engine = None
     yield
     db_module._engine = original
-
 
 @pytest.fixture
 def db_url(tmp_path):
@@ -42,12 +37,10 @@ def db_url(tmp_path):
     init_db(url)
     return url
 
-
 @pytest.fixture
 def strategy() -> StrategyDefinition:
     data = json.loads(STRATEGY_JSON_PATH.read_text())
     return StrategyDefinition.model_validate(data)
-
 
 def _make_ohlcv(n: int = 60) -> pd.DataFrame:
     idx = pd.date_range("2024-01-01", periods=n, freq="D")
@@ -63,11 +56,9 @@ def _make_ohlcv(n: int = 60) -> pd.DataFrame:
         index=idx,
     )
 
-
 # ---------------------------------------------------------------------------
 # Schema validation
 # ---------------------------------------------------------------------------
-
 
 def test_example_strategy_json_validates():
     """The example strategy JSON must be schema-valid."""
@@ -78,11 +69,9 @@ def test_example_strategy_json_validates():
     assert len(strategy.entry.conditions) == 2
     assert len(strategy.exit.conditions) == 2
 
-
 # ---------------------------------------------------------------------------
 # Store round-trip
 # ---------------------------------------------------------------------------
-
 
 def test_strategy_store_round_trip(db_url, strategy):
     """Save a strategy to the DB and retrieve it by ID."""
@@ -97,7 +86,6 @@ def test_strategy_store_round_trip(db_url, strategy):
         assert fetched.name == strategy.name
         assert fetched.version == strategy.version
         assert fetched.status == strategy.status.value
-
 
 def test_strategy_list_with_status_filter(db_url, strategy):
     """list_all filters correctly by status."""
@@ -114,7 +102,6 @@ def test_strategy_list_with_status_filter(db_url, strategy):
     assert len(testing_records) == 1
     assert len(draft_records) == 0
 
-
 def test_strategy_update_status(db_url, strategy):
     """update_status persists the new status."""
     repo = StrategyRepository()
@@ -130,7 +117,6 @@ def test_strategy_update_status(db_url, strategy):
         assert fetched is not None
         assert fetched.status == "active"
 
-
 def test_strategy_delete(db_url, strategy):
     """Deleted strategies are no longer retrievable."""
     repo = StrategyRepository()
@@ -144,7 +130,6 @@ def test_strategy_delete(db_url, strategy):
     with get_session() as session:
         assert repo.get(session, record_id) is None
         assert repo.list_all(session) == []
-
 
 def test_backtest_store_round_trip(db_url, strategy):
     """Save a backtest record linked to a strategy and retrieve it."""
@@ -177,11 +162,9 @@ def test_backtest_store_round_trip(db_url, strategy):
         by_strategy = b_repo.get_by_strategy(session, strategy_id)
         assert len(by_strategy) == 1
 
-
 # ---------------------------------------------------------------------------
 # Backtest runner integration (mocked data provider)
 # ---------------------------------------------------------------------------
-
 
 def test_backtest_runner_produces_result(strategy):
     """BacktestRunner returns a well-formed result with mocked OHLCV data."""
@@ -207,7 +190,7 @@ def test_backtest_runner_produces_result(strategy):
         return mock_rsi
 
     with (
-        patch("engine.data.base.get_provider", return_value=mock_provider),
+        patch("engine.data.provider_base.get_provider", return_value=mock_provider),
         patch("engine.indicators.compute.get_indicator", side_effect=mock_get_indicator),
     ):
         runner = BacktestRunner()
@@ -220,7 +203,6 @@ def test_backtest_runner_produces_result(strategy):
     result_data = json.loads(result.to_result_json())
     assert "total_return" in result_data
     assert "num_trades" in result_data
-
 
 def test_backtest_metrics_no_trades():
     """BacktestRunner handles zero-signal data gracefully."""
@@ -248,7 +230,7 @@ def test_backtest_metrics_no_trades():
     mock_provider = type("MockProvider", (), {"fetch_ohlcv": lambda self, *a, **kw: ohlcv})()
 
     with (
-        patch("engine.data.base.get_provider", return_value=mock_provider),
+        patch("engine.data.provider_base.get_provider", return_value=mock_provider),
         patch("engine.indicators.compute.get_indicator", return_value=lambda df, **kw: rsi_series),
     ):
         runner = BacktestRunner()

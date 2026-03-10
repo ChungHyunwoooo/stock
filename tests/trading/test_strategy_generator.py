@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 from unittest.mock import patch
 
@@ -7,7 +6,6 @@ import pandas as pd
 
 from engine.application.trading import DefinitionSignalGenerator
 from engine.schema import Condition, ConditionGroup, ConditionOp, IndicatorDef, RiskParams, StrategyDefinition
-
 
 def make_df() -> pd.DataFrame:
     index = pd.date_range("2024-01-01", periods=20, freq="D")
@@ -22,7 +20,6 @@ def make_df() -> pd.DataFrame:
         },
         index=index,
     )
-
 
 def test_definition_signal_generator_returns_entry_signal():
     df = make_df()

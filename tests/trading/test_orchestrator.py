@@ -1,11 +1,9 @@
-from __future__ import annotations
 
 from engine.application.trading import TradingControlService, TradingOrchestrator
-from engine.domain.trading import SignalAction, TradeSide, TradingMode, TradingSignal
-from engine.infrastructure.execution import PaperBroker
-from engine.infrastructure.notifications import MemoryNotifier
-from engine.infrastructure.runtime import JsonRuntimeStore
-
+from engine.core import SignalAction, TradeSide, TradingMode, TradingSignal
+from engine.execution import PaperBroker
+from engine.notifications import MemoryNotifier
+from engine.core import JsonRuntimeStore
 
 def make_signal() -> TradingSignal:
     return TradingSignal(
@@ -20,7 +18,6 @@ def make_signal() -> TradingSignal:
         reason="test signal",
     )
 
-
 def test_alert_only_mode_sends_notification_without_execution(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")
     notifier = MemoryNotifier()
@@ -33,7 +30,6 @@ def test_alert_only_mode_sends_notification_without_execution(tmp_path):
     assert len(state.pending_orders) == 0
     assert len(notifier.signals) == 1
     assert len(state.positions) == 0
-
 
 def test_semi_auto_mode_creates_pending_until_approved(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")
@@ -57,7 +53,6 @@ def test_semi_auto_mode_creates_pending_until_approved(tmp_path):
     assert len(updated.positions) == 1
     assert updated.positions[0].quantity == 3.0
 
-
 def test_auto_mode_executes_immediately(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")
     notifier = MemoryNotifier()
@@ -72,7 +67,6 @@ def test_auto_mode_executes_immediately(tmp_path):
     assert len(state.positions) == 1
     assert state.positions[0].entry_price == 100.0
     assert notifier.executions[0].quantity == 1.5
-
 
 def test_paused_runtime_does_not_create_pending_or_execution(tmp_path):
     store = JsonRuntimeStore(tmp_path / "runtime.json")
