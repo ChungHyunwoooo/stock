@@ -1,6 +1,7 @@
 
 from datetime import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -134,3 +135,39 @@ class OrderRecord(Base):
 
     # Relationship
     trade: Mapped["TradeRecord"] = relationship(back_populates="orders")
+
+
+# ── Paper Trading (Phase 3) ───────────────────────────────────
+
+
+class PaperBalance(Base):
+    """Paper 전략별 잔고 스냅샷."""
+
+    __tablename__ = "paper_balances"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    strategy_id: Mapped[str] = mapped_column(String(100), index=True)
+    balance: Mapped[float] = mapped_column(Float)
+    equity: Mapped[float] = mapped_column(Float)
+    unrealized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PaperPnlSnapshot(Base):
+    """Paper 전략별 일별 PnL 스냅샷."""
+
+    __tablename__ = "paper_pnl_snapshots"
+    __table_args__ = (
+        sa.UniqueConstraint("strategy_id", "date", name="uq_paper_pnl_strategy_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    strategy_id: Mapped[str] = mapped_column(String(100))
+    date: Mapped[str] = mapped_column(String(10))
+    cumulative_pnl: Mapped[float] = mapped_column(Float)
+    daily_pnl: Mapped[float] = mapped_column(Float)
+    trade_count: Mapped[int] = mapped_column(Integer, default=0)
+    win_count: Mapped[int] = mapped_column(Integer, default=0)
+    equity: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -11,6 +11,8 @@ from engine.core.db_models import (
     BacktestRecord,
     KnowledgeRecord,
     OrderRecord,
+    PaperBalance,
+    PaperPnlSnapshot,
     StrategyRecord,
     TradeRecord,
 )
@@ -259,3 +261,65 @@ class OrderRepository:
             record.remaining = record.amount - filled
         session.flush()
         return record
+
+
+class PaperRepository:
+    """Paper trading 잔고/PnL 스냅샷 저장소."""
+
+    def save_balance(self, session: Session, record: PaperBalance) -> PaperBalance:
+        session.add(record)
+        session.flush()
+        return record
+
+    def get_latest_balance(
+        self, session: Session, strategy_id: str,
+    ) -> PaperBalance | None:
+        stmt = (
+            select(PaperBalance)
+            .where(PaperBalance.strategy_id == strategy_id)
+            .order_by(PaperBalance.snapshot_at.desc())
+            .limit(1)
+        )
+        return session.scalars(stmt).first()
+
+    def save_daily_snapshot(
+        self, session: Session, record: PaperPnlSnapshot,
+    ) -> PaperPnlSnapshot:
+        """Upsert: 같은 (strategy_id, date) 존재 시 UPDATE."""
+        existing = session.scalars(
+            select(PaperPnlSnapshot).where(
+                PaperPnlSnapshot.strategy_id == record.strategy_id,
+                PaperPnlSnapshot.date == record.date,
+            )
+        ).first()
+
+        if existing is not None:
+            existing.cumulative_pnl = record.cumulative_pnl
+            existing.daily_pnl = record.daily_pnl
+            existing.trade_count = record.trade_count
+            existing.win_count = record.win_count
+            existing.equity = record.equity
+            session.flush()
+            return existing
+
+        session.add(record)
+        session.flush()
+        return record
+
+    def get_daily_snapshots(
+        self, session: Session, strategy_id: str, limit: int = 90,
+    ) -> list[PaperPnlSnapshot]:
+        stmt = (
+            select(PaperPnlSnapshot)
+            .where(PaperPnlSnapshot.strategy_id == strategy_id)
+            .order_by(PaperPnlSnapshot.date.desc())
+            .limit(limit)
+        )
+        return list(session.scalars(stmt).all())
+
+    def get_paper_strategies(self, session: Session) -> list[str]:
+        stmt = (
+            select(PaperPnlSnapshot.strategy_id)
+            .distinct()
+        )
+        return list(session.scalars(stmt).all())

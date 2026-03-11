@@ -1,0 +1,19 @@
+{
+  "check_interval_hours": 6,
+  "promotion_gates": {
+    "min_days": 7,
+    "min_sharpe": 0.3,
+    "min_win_rate": 0.30,
+    "max_drawdown": -0.20,
+    "min_cumulative_pnl": 0.0
+  },
+  "timeframe_min_trades": {
+    "1m": 20,
+    "5m": 20,
+    "15m": 20,
+    "1h": 10,
+    "4h": 10,
+    "1d": 5,
+    "1w": 5
+  }
+}

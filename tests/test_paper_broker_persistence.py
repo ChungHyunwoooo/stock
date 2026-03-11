@@ -235,8 +235,9 @@ class TestPaperRepository:
         repo = PaperRepository()
         for sid in ["strat_a", "strat_b", "strat_a"]:
             snap = PaperPnlSnapshot(
-                strategy_id=sid, date=f"2026-03-11",
-                cumulative_pnl=0.0, daily_pnl=0.0, equity=10000.0,
+                strategy_id=sid, date="2026-03-11",
+                cumulative_pnl=0.0, daily_pnl=0.0,
+                trade_count=0, win_count=0, equity=10000.0,
             )
             # Use upsert to avoid unique constraint violation for strat_a
             repo.save_daily_snapshot(db_session, snap)

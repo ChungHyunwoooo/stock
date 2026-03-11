@@ -62,7 +62,47 @@ def _migrate_backtests_phase2(engine: Engine) -> None:
         conn.commit()
 
 
+def _migrate_paper_phase3(engine: Engine) -> None:
+    """Add Phase 3 paper trading tables if missing.
+
+    Uses CREATE TABLE IF NOT EXISTS for idempotent creation.
+    """
+    with engine.connect() as conn:
+        conn.execute(sa.text("""
+            CREATE TABLE IF NOT EXISTS paper_balances (
+                id INTEGER PRIMARY KEY,
+                strategy_id VARCHAR(100) NOT NULL,
+                balance REAL NOT NULL,
+                equity REAL NOT NULL,
+                unrealized_pnl REAL DEFAULT 0.0,
+                snapshot_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(sa.text("""
+            CREATE INDEX IF NOT EXISTS ix_paper_balances_strategy_id
+            ON paper_balances (strategy_id)
+        """))
+        conn.execute(sa.text("""
+            CREATE TABLE IF NOT EXISTS paper_pnl_snapshots (
+                id INTEGER PRIMARY KEY,
+                strategy_id VARCHAR(100) NOT NULL,
+                date VARCHAR(10) NOT NULL,
+                cumulative_pnl REAL NOT NULL,
+                daily_pnl REAL NOT NULL,
+                trade_count INTEGER DEFAULT 0,
+                win_count INTEGER DEFAULT 0,
+                equity REAL NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(strategy_id, date)
+            )
+        """))
+        conn.commit()
+    logger.info("Migration: paper_phase3 tables ensured")
+
+
 def init_db(db_url: str = "sqlite:///tse.db") -> None:
     engine = get_engine(db_url)
     Base.metadata.create_all(engine)
     _migrate_backtests_phase2(engine)
+    _migrate_paper_phase3(engine)
