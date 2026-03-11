@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-11T18:24:03.865Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-11T19:05:16.607Z"
 last_activity: 2026-03-11 — Plan 03-02 complete (PromotionGate 6-criteria + 3-channel interface)
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 14
+  completed_plans: 13
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** 수익을 주는 자동화 봇 — 전략 발굴부터 실매매까지 사람 개입 없이 돌아가되, 성과 저하 시 즉시 알림으로 제어권 유지
-**Current focus:** Phase 3 — Paper Trading Stage
+**Current focus:** Phase 4 — Portfolio Risk
 
 ## Current Position
 
-Phase: 3 of 8 (Paper Trading Stage)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 3 Complete
-Last activity: 2026-03-11 — Plan 03-02 complete (PromotionGate 6-criteria + 3-channel interface)
+Phase: 4 of 8 (Portfolio Risk)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-11 — Plan 04-01 complete (ATR+Kelly PositionSizer + Risk Parity 자본 배분)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 02 P05 | 4min | 2 tasks | 5 files |
 | Phase 03 P01 | 7min | 2 tasks | 6 files |
 | Phase 03 P02 | 8min | 2 tasks | 10 files |
+| Phase 04 P01 | 6min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [03-02]: Sharpe skip when < 2 daily data points (passed=True) -- insufficient data should not block
 - [03-02]: Max DD comparison: actual >= threshold (both negative) -- -0.10 >= -0.20 means OK
 - [03-02]: PromotionConfirmView timeout 120s -- longer than TransitionConfirmView for higher-stakes decision
+- [Phase 04]: Kelly cap 제거 -- RiskManager.position_size_factor()가 드로다운 축소 담당
+- [Phase 04]: Risk Parity numpy 직접 구현 -- riskfolio-lib 미사용, 역분산 가중
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T18:24:03.862Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-portfolio-risk/04-CONTEXT.md
+Last session: 2026-03-11T19:05:16.604Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
