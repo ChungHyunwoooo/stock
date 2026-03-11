@@ -70,11 +70,11 @@ def test_strategy_serialization_roundtrip(sample_strategy):
 
 def test_strategy_status_enum():
     """All StrategyStatus values should be parseable."""
-    statuses = ["draft", "testing", "active", "archived"]
+    statuses = ["draft", "testing", "paper", "active", "archived"]
     for s in statuses:
         assert StrategyStatus(s).value == s
 
-    assert len(StrategyStatus) == 4
+    assert len(StrategyStatus) == 5
 
     with pytest.raises(ValueError):
         StrategyStatus("invalid_status")

@@ -26,6 +26,7 @@ class Direction(str, Enum):
 class StrategyStatus(str, Enum):
     draft = "draft"
     testing = "testing"
+    paper = "paper"
     active = "active"
     archived = "archived"
 
