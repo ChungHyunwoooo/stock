@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-11T09:15:38.570Z"
-last_activity: 2026-03-11 — Plan 02-01 complete (SlippageModel + DepthCache + FeeModel + BacktestRunner cost integration)
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-11T09:22:21Z"
+last_activity: 2026-03-11 — Plan 02-04 complete (MultiSymbolValidator + correlation selector + parallel backtest + median Sharpe gate)
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
-  percent: 40
+  completed_plans: 7
+  percent: 70
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 2 of 8 (Backtest Quality Gates)
-Plan: 1 of 7 in current phase
+Plan: 4 of 7 in current phase
 Status: In Progress
-Last activity: 2026-03-11 — Plan 02-01 complete (SlippageModel + DepthCache + FeeModel + BacktestRunner cost integration)
+Last activity: 2026-03-11 — Plan 02-04 complete (MultiSymbolValidator + correlation selector + parallel backtest + median Sharpe gate)
 
-Progress: [████░░░░░░] 40%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [████░░░░░░] 40%
 *Updated after each plan completion*
 | Phase 01 P02 | 9min | 2 tasks | 7 files |
 | Phase 02 P01 | 5min | 2 tasks | 9 files |
+| Phase 02 P04 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 01-02]: API router registry.json 미등록 전략은 기존 DB-only 로직 유지 -- 하위 호환
 - [Phase 02]: SlippageModel Protocol with calculate_slippage(symbol, side, order_size_usd, price) -> float
 - [Phase 02]: BacktestRunner backward compatible: no-arg constructor defaults to NoSlippage + fee_rate=0.0
+- [02-04]: Greedy correlation selection: first symbol always included, add if |corr| < max_corr with all selected
+- [02-04]: _validate_sequential for mock-friendly testing without ProcessPoolExecutor pickle issues
+- [02-04]: Failed symbol backtests skipped with warning, not fatal -- partial results accepted
 
 ### Pending Todos
 
@@ -85,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:15:38.567Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-11T09:22:21Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
