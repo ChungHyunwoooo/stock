@@ -58,7 +58,7 @@ def create_broker(
         from engine.execution.paper_broker import PaperBroker
         return PaperBroker()
 
-    _SUPPORTED = {"binance", "upbit"}
+    _SUPPORTED = {"binance", "upbit", "bybit", "okx"}
     if exchange not in _SUPPORTED:
         raise ValueError(f"지원하지 않는 거래소: {exchange}")
 
@@ -88,6 +88,23 @@ def create_broker(
             logger.info("기본 레버리지: %dx", leverage)
         return broker
 
-    # exchange == "upbit"
-    from engine.execution.upbit_broker import UpbitBroker
-    return UpbitBroker(api_key=api_key, secret=secret)
+    if exchange == "upbit":
+        from engine.execution.upbit_broker import UpbitBroker
+        return UpbitBroker(api_key=api_key, secret=secret)
+
+    # bybit / okx -- ccxt 범용 브로커
+    from engine.execution.ccxt_broker import CcxtBroker
+    mt = market_type or exchange_config.get("market_type", "spot")
+    tn = testnet if testnet is not None else exchange_config.get("testnet", True)
+    extra: dict[str, Any] = {}
+    password = _resolve_env(exchange_config.get("password", ""))
+    if password:
+        extra["password"] = password
+    return CcxtBroker(
+        exchange=exchange,
+        api_key=api_key,
+        secret=secret,
+        market_type=mt,
+        testnet=tn,
+        **extra,
+    )
