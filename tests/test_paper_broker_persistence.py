@@ -272,3 +272,142 @@ class TestPaperTradingConfig:
         tf = data["timeframe_min_trades"]
         assert tf["1m"] == 20
         assert tf["1d"] == 5
+
+
+# ── Task 2: PaperBroker DB Persistence ───────────────────────
+
+
+@pytest.fixture()
+def paper_db(tmp_path: Path):
+    """File-based SQLite for PaperBroker integration tests."""
+    db_path = tmp_path / "paper_test.db"
+    db_url = f"sqlite:///{db_path}"
+    return db_url
+
+
+class TestPaperBrokerInit:
+    def test_strategy_id_required(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        broker = PaperBroker(strategy_id="test_strat", db_url=paper_db)
+        assert broker.strategy_id == "test_strat"
+
+    def test_initial_balance_default(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        broker = PaperBroker(strategy_id="s1", db_url=paper_db)
+        bal = broker._fetch_raw_balance()
+        assert bal["total_equity"] == 10_000_000
+
+    def test_restore_balance_from_db(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        # First broker saves balance
+        b1 = PaperBroker(strategy_id="s1", initial_balance=50_000, db_url=paper_db)
+        b1._save_balance_snapshot()
+
+        # Second broker restores from DB
+        b2 = PaperBroker(strategy_id="s1", initial_balance=50_000, db_url=paper_db)
+        bal = b2._fetch_raw_balance()
+        assert bal["total_equity"] == 50_000
+
+    def test_different_strategies_isolated(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        b1 = PaperBroker(strategy_id="s1", initial_balance=100_000, db_url=paper_db)
+        b1._save_balance_snapshot()
+
+        b2 = PaperBroker(strategy_id="s2", initial_balance=200_000, db_url=paper_db)
+        b2._save_balance_snapshot()
+
+        # Restore and verify isolation
+        b1_new = PaperBroker(strategy_id="s1", initial_balance=100_000, db_url=paper_db)
+        b2_new = PaperBroker(strategy_id="s2", initial_balance=200_000, db_url=paper_db)
+
+        assert b1_new._fetch_raw_balance()["total_equity"] == 100_000
+        assert b2_new._fetch_raw_balance()["total_equity"] == 200_000
+
+
+class TestPaperBrokerPersistence:
+    def test_save_balance_snapshot(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        broker = PaperBroker(strategy_id="s1", initial_balance=10_000, db_url=paper_db)
+        broker._save_balance_snapshot()
+
+        # Verify in DB
+        from engine.core.database import get_session
+        from engine.core.repository import PaperRepository
+
+        repo = PaperRepository()
+        with get_session() as session:
+            latest = repo.get_latest_balance(session, "s1")
+            assert latest is not None
+            assert latest.balance == 10_000
+
+    def test_save_daily_snapshot(self, paper_db: str):
+        from engine.execution.paper_broker import PaperBroker
+
+        broker = PaperBroker(strategy_id="s1", initial_balance=10_000, db_url=paper_db)
+        broker.save_daily_snapshot()
+
+        from engine.core.database import get_session
+        from engine.core.repository import PaperRepository
+
+        repo = PaperRepository()
+        with get_session() as session:
+            snaps = repo.get_daily_snapshots(session, "s1")
+            assert len(snaps) >= 1
+
+    def test_db_failure_does_not_block(self, paper_db: str, monkeypatch):
+        """DB failure during save should not raise."""
+        from engine.execution.paper_broker import PaperBroker
+
+        broker = PaperBroker(strategy_id="s1", initial_balance=10_000, db_url=paper_db)
+
+        # Monkeypatch to simulate DB failure
+        from engine.core import repository
+        original_save = repository.PaperRepository.save_balance
+        def failing_save(*args, **kwargs):
+            raise RuntimeError("DB down")
+        monkeypatch.setattr(repository.PaperRepository, "save_balance", failing_save)
+
+        # Should not raise
+        broker._save_balance_snapshot()
+
+
+class TestTradeRepositoryListOpenExtended:
+    """TradeRepository.list_open needs strategy_name + broker filters for PaperBroker."""
+
+    def test_list_open_with_strategy_and_broker(self, db_session: Session):
+        from engine.core.repository import TradeRepository
+        from engine.core.db_models import TradeRecord
+
+        repo = TradeRepository()
+        now = datetime.now(timezone.utc)
+
+        # Paper trade for s1
+        t1 = TradeRecord(
+            trade_id="t1", strategy_name="s1", symbol="BTC", timeframe="1h",
+            side="long", broker="paper", entry_price=50000, entry_quantity=1,
+            entry_at=now, status="open",
+        )
+        # Live trade for s1
+        t2 = TradeRecord(
+            trade_id="t2", strategy_name="s1", symbol="ETH", timeframe="1h",
+            side="long", broker="live", entry_price=3000, entry_quantity=1,
+            entry_at=now, status="open",
+        )
+        # Paper trade for s2
+        t3 = TradeRecord(
+            trade_id="t3", strategy_name="s2", symbol="BTC", timeframe="1h",
+            side="long", broker="paper", entry_price=50000, entry_quantity=1,
+            entry_at=now, status="open",
+        )
+        db_session.add_all([t1, t2, t3])
+        db_session.flush()
+
+        # Filter by strategy_name and broker
+        result = repo.list_open(db_session, strategy_name="s1", broker="paper")
+        assert len(result) == 1
+        assert result[0].trade_id == "t1"
