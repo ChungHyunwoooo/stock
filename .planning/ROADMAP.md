@@ -14,7 +14,7 @@
 - [ ] **Phase 2: Backtest Quality Gates** - 슬리피지 모델 + 워크포워드 OOS + 멀티심볼 검증으로 신뢰 가능한 백테스트 구축
 - [ ] **Phase 3: Paper Trading Stage** - PaperBroker 영속화 + Paper→Live 승격 게이트 자동 검증
 - [x] **Phase 4: Portfolio Risk** - 상관관계 필터 + 변동성 기반 포지션 사이징으로 다전략 동시 운용 안전화 (completed 2026-03-11)
-- [ ] **Phase 5: Performance Monitoring** - 롤링 20거래 윈도우 성과 감시 + Discord 알림으로 실매매 성과 저하 즉시 감지
+- [x] **Phase 5: Performance Monitoring** - 롤링 20거래 윈도우 성과 감시 + Discord 알림으로 실매매 성과 저하 즉시 감지 (completed 2026-03-11)
 - [ ] **Phase 6: Alert & MTF Enrichment** - Discord 알림 통합 고도화 + 멀티 타임프레임 진입 필터 활성화
 - [ ] **Phase 7: Auto-Discovery** - Optuna 기반 Bayesian 파라미터 탐색 + ccxt 멀티거래소 확장
 - [ ] **Phase 8: Monitoring Dashboard** - Streamlit 대시보드로 전략 파이프라인 전체 가시화
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Backtest Quality Gates | 6/7 | In Progress|  |
 | 3. Paper Trading Stage | 2/2 | Complete | 2026-03-11 |
 | 4. Portfolio Risk | 2/2 | Complete   | 2026-03-11 |
-| 5. Performance Monitoring | 1/2 | In Progress|  |
+| 5. Performance Monitoring | 2/2 | Complete   | 2026-03-11 |
 | 6. Alert & MTF Enrichment | 0/3 | Not started | - |
 | 7. Auto-Discovery | 0/2 | Not started | - |
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
