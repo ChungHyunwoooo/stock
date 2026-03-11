@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import tempfile
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,12 +51,22 @@ class LifecycleManager:
     - Record transition history (status_history)
     - Atomic registry.json writes (tempfile + rename)
     - Register / query strategies
+    - Fire transition callbacks (observer pattern)
 
-    Does NOT call Discord, API, or any external service.
+    Does NOT call Discord, API, or any external service directly.
+    Callbacks allow external listeners (e.g. EventNotifier) to react.
     """
 
     def __init__(self, registry_path: str | Path = "strategies/registry.json") -> None:
         self.registry_path = Path(registry_path)
+        self._on_transition_callbacks: list[Callable[[str, str, str], None]] = []
+
+    def add_transition_listener(self, callback: Callable[[str, str, str], None]) -> None:
+        """Register a callback invoked after successful transitions.
+
+        Callback signature: (strategy_id, from_status, to_status) -> None
+        """
+        self._on_transition_callbacks.append(callback)
 
     # -- public API ----------------------------------------------------------
 
@@ -124,6 +135,13 @@ class LifecycleManager:
         logger.info(
             "%s: %s -> %s (%s)", strategy_id, current_status.value, target_status.value, reason
         )
+
+        for cb in self._on_transition_callbacks:
+            try:
+                cb(strategy_id, current_status.value, target_status.value)
+            except Exception:
+                logger.warning("Transition callback failed for %s", strategy_id, exc_info=True)
+
         return entry
 
     def register(self, entry: dict) -> dict:

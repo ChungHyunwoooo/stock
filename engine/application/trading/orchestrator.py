@@ -10,6 +10,8 @@ from engine.core.models import OrderRequest, PendingOrder, TradingMode, TradingR
 from engine.core.ports import BrokerPort, NotificationPort, RuntimeStorePort
 
 if TYPE_CHECKING:
+    from engine.notifications.event_notifier import EventNotifier
+    from engine.strategy.mtf_filter import MTFConfirmationGate
     from engine.strategy.portfolio_risk import PortfolioRiskManager
 
 class TradingOrchestrator:
@@ -19,11 +21,15 @@ class TradingOrchestrator:
         notifier: NotificationPort,
         broker: BrokerPort,
         portfolio_risk: PortfolioRiskManager | None = None,
+        event_notifier: EventNotifier | None = None,
+        mtf_filter: MTFConfirmationGate | None = None,
     ) -> None:
         self.runtime_store = runtime_store
         self.notifier = notifier
         self.broker = broker
         self.portfolio_risk = portfolio_risk
+        self.event_notifier = event_notifier
+        self.mtf_filter = mtf_filter
 
     def process_signal(self, signal: TradingSignal, quantity: float = 1.0) -> TradingRuntimeState:
         state = self.runtime_store.load()
@@ -75,6 +81,18 @@ class TradingOrchestrator:
                 self.runtime_store.save(state)
                 return state
 
+        # MTF confirmation gate
+        if self.mtf_filter is not None:
+            aligned, reason = self.mtf_filter.check_alignment(
+                signal.symbol, signal.side, signal.timeframe,
+            )
+            if not aligned:
+                self.notifier.send_text(
+                    f"[MTF] {signal.symbol} entry blocked: {reason}"
+                )
+                self.runtime_store.save(state)
+                return state
+
         order = self._build_order(signal, quantity)
         execution = self.broker.execute_order(order, state)
         state.executions.append(execution)
@@ -82,6 +100,8 @@ class TradingOrchestrator:
         self.runtime_store.save(state)
         self.notifier.send_signal(signal, mode_label=state.mode.value)
         self.notifier.send_execution(execution)
+        if self.event_notifier:
+            self.event_notifier.notify_execution(execution)
         return state
 
     @staticmethod

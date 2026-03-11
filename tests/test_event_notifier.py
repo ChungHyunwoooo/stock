@@ -1,10 +1,15 @@
-"""Tests for EventNotifier -- verifies 4 event type message formats."""
+"""Tests for EventNotifier -- verifies 4 event type message formats + integration."""
 
 from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
 
 from engine.core.models import BrokerKind, ExecutionRecord, SignalAction, TradeSide
 from engine.notifications.discord_webhook import MemoryNotifier
 from engine.notifications.event_notifier import EventNotifier
+from engine.strategy.lifecycle_manager import LifecycleManager
 
 
 def _make_notifier() -> tuple[EventNotifier, MemoryNotifier]:
@@ -120,3 +125,47 @@ class TestNotifyBacktestComplete:
         assert "Sharpe N/A" in msg
         assert "MaxDD N/A" in msg
         assert "Return +5.0%" in msg
+
+
+class TestLifecycleCallbackIntegration:
+    """LifecycleManager transition -> callback -> EventNotifier -> MemoryNotifier."""
+
+    def _make_registry(self, tmp_path: Path) -> Path:
+        registry_path = tmp_path / "registry.json"
+        registry_path.write_text(json.dumps({
+            "strategies": [{
+                "id": "test_strat",
+                "name": "Test Strategy",
+                "status": "draft",
+                "status_history": [],
+            }]
+        }))
+        return registry_path
+
+    def test_transition_fires_callback(self, tmp_path: Path) -> None:
+        registry_path = self._make_registry(tmp_path)
+        en, mem = _make_notifier()
+        lm = LifecycleManager(registry_path=registry_path)
+        lm.add_transition_listener(
+            lambda sid, fr, to: en.notify_lifecycle_transition(sid, fr, to)
+        )
+
+        lm.transition("test_strat", "testing", reason="unit test")
+
+        assert len(mem.messages) == 1
+        msg = mem.messages[0]
+        assert "[LIFECYCLE]" in msg
+        assert "test_strat" in msg
+        assert "draft -> testing" in msg
+
+    def test_callback_error_does_not_block_transition(self, tmp_path: Path) -> None:
+        registry_path = self._make_registry(tmp_path)
+        lm = LifecycleManager(registry_path=registry_path)
+
+        def bad_callback(sid: str, fr: str, to: str) -> None:
+            raise RuntimeError("callback boom")
+
+        lm.add_transition_listener(bad_callback)
+        entry = lm.transition("test_strat", "testing")
+
+        assert entry["status"] == "testing"
