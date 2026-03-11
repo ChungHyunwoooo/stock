@@ -56,6 +56,6 @@ def test_discord_command_registry_registers_all_groups():
     names = register_default_commands(tree, DiscordBotContext(control=DummyControl()))
 
     registered = sorted(command.name for command in tree.get_commands())
-    assert names == ["runtime", "orders", "analysis", "pattern", "scanner"]
+    assert names == ["runtime", "orders", "analysis", "pattern", "scanner", "lifecycle"]
     assert "analysis" in registered
     assert "pattern" in registered

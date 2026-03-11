@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -39,6 +39,15 @@ def manager(registry_path):
     return LifecycleManager(registry_path=registry_path)
 
 
+@pytest.fixture(autouse=True)
+def _set_manager_override(manager):
+    """Inject test LifecycleManager into autocomplete module-level override."""
+    import engine.interfaces.discord.autocomplete as ac
+    ac._lifecycle_manager_override = manager
+    yield
+    ac._lifecycle_manager_override = None
+
+
 def _make_interaction(namespace_attrs: dict | None = None):
     """Create a mock Interaction with namespace attributes."""
     interaction = AsyncMock()
@@ -59,7 +68,7 @@ async def test_strategy_autocomplete(manager):
     from engine.interfaces.discord.autocomplete import strategy_autocomplete
 
     interaction = _make_interaction()
-    choices = await strategy_autocomplete(interaction, "", _manager=manager)
+    choices = await strategy_autocomplete(interaction, "")
 
     assert len(choices) == 3
     values = [c.value for c in choices]
@@ -77,7 +86,7 @@ async def test_strategy_autocomplete_filter(manager):
     from engine.interfaces.discord.autocomplete import strategy_autocomplete
 
     interaction = _make_interaction()
-    choices = await strategy_autocomplete(interaction, "alpha", _manager=manager)
+    choices = await strategy_autocomplete(interaction, "alpha")
 
     assert len(choices) == 1
     assert choices[0].value == "strat_a"
@@ -93,7 +102,7 @@ async def test_target_status_autocomplete_draft(manager):
     from engine.interfaces.discord.autocomplete import target_status_autocomplete
 
     interaction = _make_interaction({"strategy_id": "strat_a"})
-    choices = await target_status_autocomplete(interaction, "", _manager=manager)
+    choices = await target_status_autocomplete(interaction, "")
 
     values = [c.value for c in choices]
     assert values == ["testing"]
@@ -105,7 +114,7 @@ async def test_target_status_autocomplete_active(manager):
     from engine.interfaces.discord.autocomplete import target_status_autocomplete
 
     interaction = _make_interaction({"strategy_id": "strat_c"})
-    choices = await target_status_autocomplete(interaction, "", _manager=manager)
+    choices = await target_status_autocomplete(interaction, "")
 
     values = sorted(c.value for c in choices)
     assert values == ["archived", "paper"]

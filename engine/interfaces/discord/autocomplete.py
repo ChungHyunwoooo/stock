@@ -94,21 +94,23 @@ def _cached_symbols(exchange: str) -> list[str]:
 # Lifecycle autocomplete (strategy + target status)
 # ---------------------------------------------------------------------------
 
-def _get_lifecycle_manager(interaction, _manager=None):
-    """Resolve LifecycleManager from interaction context or explicit override."""
-    if _manager is not None:
-        return _manager
+# Test hook: set to a LifecycleManager instance to override resolution.
+_lifecycle_manager_override = None
+
+
+def _get_lifecycle_manager(interaction):
+    """Resolve LifecycleManager from interaction context or test override."""
+    if _lifecycle_manager_override is not None:
+        return _lifecycle_manager_override
     ctx = getattr(getattr(interaction, 'client', None), 'bot_context', None)
     if ctx is not None:
         return getattr(ctx, 'lifecycle_manager', None)
     return None
 
 
-async def strategy_autocomplete(interaction, current: str, *, _manager=None) -> list[app_commands.Choice[str]]:
+async def strategy_autocomplete(interaction, current: str) -> list[app_commands.Choice[str]]:
     """Autocomplete: list registered strategies as '{name} ({id})' choices."""
-    from engine.strategy.lifecycle_manager import LifecycleManager
-
-    mgr: LifecycleManager | None = _get_lifecycle_manager(interaction, _manager)
+    mgr = _get_lifecycle_manager(interaction)
     if mgr is None:
         return []
     strategies = mgr.list_by_status(None)
@@ -122,12 +124,12 @@ async def strategy_autocomplete(interaction, current: str, *, _manager=None) -> 
     return [app_commands.Choice(name=label[:100], value=sid) for label, sid in pairs[:25]]
 
 
-async def target_status_autocomplete(interaction, current: str, *, _manager=None) -> list[app_commands.Choice[str]]:
+async def target_status_autocomplete(interaction, current: str) -> list[app_commands.Choice[str]]:
     """Autocomplete: list allowed target statuses for the selected strategy."""
-    from engine.strategy.lifecycle_manager import ALLOWED_TRANSITIONS, LifecycleManager
+    from engine.strategy.lifecycle_manager import ALLOWED_TRANSITIONS
     from engine.schema import StrategyStatus
 
-    mgr: LifecycleManager | None = _get_lifecycle_manager(interaction, _manager)
+    mgr = _get_lifecycle_manager(interaction)
     if mgr is None:
         return []
 
