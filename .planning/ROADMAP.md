@@ -45,16 +45,18 @@ Plans:
   1. BacktestRunner가 거래소별 슬리피지+수수료를 적용하고, 동일 전략에 VolumeAdjustedSlippage를 적용하면 수익률이 낮아진다
   2. 워크포워드 검증 실행 시 IS/OOS 분할 결과와 성과 갭 판정(통과/실패)이 자동 출력된다
   3. 2-3개 비상관 심볼에 동시 백테스트를 실행하면 심볼별 Sharpe와 중앙값 기준 통과 여부가 자동 판정된다
-  4. 백테스트 실행마다 결과가 DB에 저장되고, 전략별 이력 비교를 조회할 수 있다
+  4. 백테스트 실행마다 결과가 DB에 저장되고, 전략별 이력 비교를 CLI/API/Discord로 조회할 수 있다
   5. CPCV 모드를 선택하면 기본 워크포워드 대신 조합형 퍼지 교차검증이 실행된다
-**Plans**: 5 plans
+**Plans**: 7 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — SlippageModel 프로토콜 + VolumeAdjustedSlippage + FeeModel + BacktestRunner 통합 (BT-01)
+- [ ] 02-01-PLAN.md — SlippageModel + DepthCache/DepthCollector + FeeModel + BacktestRunner 통합 (BT-01)
 - [ ] 02-02-PLAN.md — WalkForwardValidator 구현 (IS/OOS 분할, 성과 갭 임계치 판정) (BT-02)
 - [ ] 02-03-PLAN.md — CPCVValidator 구현 (조합형 퍼지 교차검증 모드) (BT-05)
 - [ ] 02-04-PLAN.md — MultiSymbolValidator 구현 (상관계수 심볼 선택 + 병렬 백테스트 + 중앙 Sharpe 게이트) (BT-03)
 - [ ] 02-05-PLAN.md — BacktestRecord 스키마 확장 + 자동 DB 저장 + 이력 비교 조회 (BT-04)
+- [ ] 02-06-PLAN.md — quantstats 리포트 + IS/OOS 시각화 + 통합 판정 리포트 (BT-02, BT-05)
+- [ ] 02-07-PLAN.md — CLI(rich table) + API + Discord 인터페이스 (이력 조회/비교/삭제) (BT-04)
 
 ### Phase 3: Paper Trading Stage
 **Goal**: 백테스트를 통과한 전략이 실자본 투입 전 실시간 시장에서 최소 기간 검증을 받고, 정량 기준 충족 시에만 실매매로 승격된다
@@ -152,7 +154,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Lifecycle Foundation | 1/3 | In Progress|  |
-| 2. Backtest Quality Gates | 0/5 | Not started | - |
+| 2. Backtest Quality Gates | 0/7 | Not started | - |
 | 3. Paper Trading Stage | 0/2 | Not started | - |
 | 4. Portfolio Risk | 0/2 | Not started | - |
 | 5. Performance Monitoring | 0/2 | Not started | - |
