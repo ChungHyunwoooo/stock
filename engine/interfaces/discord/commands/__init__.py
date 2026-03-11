@@ -1,4 +1,5 @@
 from engine.interfaces.discord.commands.analysis import AnalysisCommandPlugin
+from engine.interfaces.discord.commands.lifecycle import LifecycleCommandPlugin
 from engine.interfaces.discord.commands.orders import OrderCommandPlugin
 from engine.interfaces.discord.commands.pattern import PatternCommandPlugin
 from engine.interfaces.discord.commands.runtime import RuntimeCommandPlugin
@@ -10,11 +11,13 @@ DEFAULT_COMMAND_PLUGINS = [
     AnalysisCommandPlugin(),
     PatternCommandPlugin(),
     ScannerCommandPlugin(),
+    LifecycleCommandPlugin(),
 ]
 
 __all__ = [
     "AnalysisCommandPlugin",
     "DEFAULT_COMMAND_PLUGINS",
+    "LifecycleCommandPlugin",
     "OrderCommandPlugin",
     "PatternCommandPlugin",
     "RuntimeCommandPlugin",

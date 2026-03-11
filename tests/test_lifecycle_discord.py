@@ -151,9 +151,9 @@ async def test_transition_confirm_view(manager, registry_path):
     )
 
     interaction = AsyncMock()
-    button = MagicMock()
 
-    await view.confirm.callback(view, interaction, button)
+    # discord.ui.button callback wraps (self, interaction, button) -> __call__(interaction)
+    await view.confirm.callback(interaction)
 
     interaction.response.edit_message.assert_called_once()
     call_kwargs = interaction.response.edit_message.call_args
@@ -182,9 +182,7 @@ async def test_transition_invalid_shows_error(manager):
     )
 
     interaction = AsyncMock()
-    button = MagicMock()
-
-    await view.confirm.callback(view, interaction, button)
+    await view.confirm.callback(interaction)
 
     interaction.response.edit_message.assert_called_once()
     call_kwargs = interaction.response.edit_message.call_args

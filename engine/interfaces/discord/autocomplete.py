@@ -88,3 +88,63 @@ async def pending_id_autocomplete(interaction, current: str) -> list[app_command
 @lru_cache(maxsize=16)
 def _cached_symbols(exchange: str) -> list[str]:
     return load_exchange_symbols(exchange)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle autocomplete (strategy + target status)
+# ---------------------------------------------------------------------------
+
+def _get_lifecycle_manager(interaction, _manager=None):
+    """Resolve LifecycleManager from interaction context or explicit override."""
+    if _manager is not None:
+        return _manager
+    ctx = getattr(getattr(interaction, 'client', None), 'bot_context', None)
+    if ctx is not None:
+        return getattr(ctx, 'lifecycle_manager', None)
+    return None
+
+
+async def strategy_autocomplete(interaction, current: str, *, _manager=None) -> list[app_commands.Choice[str]]:
+    """Autocomplete: list registered strategies as '{name} ({id})' choices."""
+    from engine.strategy.lifecycle_manager import LifecycleManager
+
+    mgr: LifecycleManager | None = _get_lifecycle_manager(interaction, _manager)
+    if mgr is None:
+        return []
+    strategies = mgr.list_by_status(None)
+    labeled = [f"{s.get('name', s['id'])} ({s['id']})" for s in strategies]
+    ids = [s["id"] for s in strategies]
+
+    needle = current.lower().strip()
+    pairs = list(zip(labeled, ids))
+    if needle:
+        pairs = [(label, sid) for label, sid in pairs if needle in label.lower()]
+    return [app_commands.Choice(name=label[:100], value=sid) for label, sid in pairs[:25]]
+
+
+async def target_status_autocomplete(interaction, current: str, *, _manager=None) -> list[app_commands.Choice[str]]:
+    """Autocomplete: list allowed target statuses for the selected strategy."""
+    from engine.strategy.lifecycle_manager import ALLOWED_TRANSITIONS, LifecycleManager
+    from engine.schema import StrategyStatus
+
+    mgr: LifecycleManager | None = _get_lifecycle_manager(interaction, _manager)
+    if mgr is None:
+        return []
+
+    strategy_id = getattr(getattr(interaction, 'namespace', None), 'strategy_id', None)
+    if not strategy_id:
+        return []
+
+    try:
+        entry = mgr.get_strategy(strategy_id)
+    except Exception:
+        return []
+
+    try:
+        current_status = StrategyStatus(entry.get("status"))
+    except ValueError:
+        return []
+
+    allowed = ALLOWED_TRANSITIONS.get(current_status, set())
+    values = sorted(s.value for s in allowed)
+    return _filter_choices(values, current)
