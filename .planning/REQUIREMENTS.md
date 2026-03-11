@@ -67,30 +67,30 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BT-01 | — | Pending |
-| BT-02 | — | Pending |
-| BT-03 | — | Pending |
-| BT-04 | — | Pending |
-| BT-05 | — | Pending |
-| LIFE-01 | — | Pending |
-| LIFE-02 | — | Pending |
-| LIFE-03 | — | Pending |
-| LIFE-04 | — | Pending |
-| RISK-01 | — | Pending |
-| RISK-02 | — | Pending |
-| RISK-03 | — | Pending |
-| MON-01 | — | Pending |
-| MON-02 | — | Pending |
-| MON-03 | — | Pending |
-| MON-04 | — | Pending |
-| DISC-01 | — | Pending |
-| DISC-02 | — | Pending |
+| BT-01 | Phase 2 | Pending |
+| BT-02 | Phase 2 | Pending |
+| BT-03 | Phase 2 | Pending |
+| BT-04 | Phase 2 | Pending |
+| BT-05 | Phase 2 | Pending |
+| LIFE-01 | Phase 1 | Pending |
+| LIFE-02 | Phase 3 | Pending |
+| LIFE-03 | Phase 3 | Pending |
+| LIFE-04 | Phase 1 | Pending |
+| RISK-01 | Phase 5 | Pending |
+| RISK-02 | Phase 4 | Pending |
+| RISK-03 | Phase 4 | Pending |
+| MON-01 | Phase 6 | Pending |
+| MON-02 | Phase 6 | Pending |
+| MON-03 | Phase 8 | Pending |
+| MON-04 | Phase 6 | Pending |
+| DISC-01 | Phase 7 | Pending |
+| DISC-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation — all 19 requirements mapped*
