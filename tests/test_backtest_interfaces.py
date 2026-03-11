@@ -18,7 +18,11 @@ from engine.core.repository import BacktestRepository
 
 @pytest.fixture()
 def engine():
-    eng = create_engine("sqlite:///:memory:", echo=False)
+    eng = create_engine(
+        "sqlite:///:memory:",
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
     Base.metadata.create_all(eng)
     return eng
 

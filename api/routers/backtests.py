@@ -6,7 +6,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -46,6 +46,11 @@ class BacktestResponse(BaseModel):
     max_drawdown: float | None
     result_json: str
     created_at: str | None
+    # Phase 2 fields
+    slippage_model: str = "none"
+    fee_rate: float = 0.0
+    wf_result: str | None = None
+    cpcv_mode: bool = False
 
     @classmethod
     def from_record(cls, r: BacktestRecord) -> BacktestResponse:
@@ -61,6 +66,10 @@ class BacktestResponse(BaseModel):
             max_drawdown=r.max_drawdown,
             result_json=r.result_json,
             created_at=str(r.created_at)[:19] if r.created_at else None,
+            slippage_model=r.slippage_model or "none",
+            fee_rate=r.fee_rate or 0.0,
+            wf_result=r.wf_result,
+            cpcv_mode=r.cpcv_mode or False,
         )
 
 @router.post("/run", response_model=BacktestResponse, status_code=201)
@@ -107,6 +116,16 @@ def list_backtests(
     records = _repo.list_all(db)
     return [BacktestResponse.from_record(r) for r in records]
 
+# NOTE: /compare must be before /{backtest_id} to avoid path conflict
+@router.get("/compare", response_model=list[BacktestResponse])
+def compare_strategies(
+    strategy_ids: Annotated[str, Query(description="Comma-separated strategy IDs")],
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> list[BacktestResponse]:
+    ids = [int(x.strip()) for x in strategy_ids.split(",") if x.strip()]
+    records = _repo.compare_strategies(db, ids)
+    return [BacktestResponse.from_record(r) for r in records]
+
 @router.get("/{backtest_id}", response_model=BacktestResponse)
 def get_backtest(
     backtest_id: int,
@@ -117,6 +136,17 @@ def get_backtest(
         raise HTTPException(status_code=404, detail="Backtest not found")
     return BacktestResponse.from_record(record)
 
+@router.delete("/{backtest_id}", status_code=204)
+def delete_backtest(
+    backtest_id: int,
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> Response:
+    record = _repo.get(db, backtest_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    _repo.delete(db, backtest_id)
+    return Response(status_code=204)
+
 @router.get("/strategy/{strategy_id}", response_model=list[BacktestResponse])
 def get_by_strategy(
     strategy_id: int,
@@ -124,6 +154,23 @@ def get_by_strategy(
 ) -> list[BacktestResponse]:
     records = _repo.get_by_strategy(db, strategy_id)
     return [BacktestResponse.from_record(r) for r in records]
+
+@router.get("/{strategy_id}/history", response_model=list[BacktestResponse])
+def get_history(
+    strategy_id: int,
+    limit: int = 100,
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> list[BacktestResponse]:
+    records = _repo.get_history(db, strategy_id, limit=limit)
+    return [BacktestResponse.from_record(r) for r in records]
+
+@router.delete("/strategy/{strategy_id}", status_code=204)
+def delete_by_strategy(
+    strategy_id: int,
+    db: Annotated[Session, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> Response:
+    _repo.delete_by_strategy(db, strategy_id)
+    return Response(status_code=204)
 
 # ---------------------------------------------------------------------------
 # Multi-symbol scan
