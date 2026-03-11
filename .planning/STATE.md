@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-11T20:02:32.545Z"
+last_updated: "2026-03-11T20:09:20.248Z"
 last_activity: 2026-03-11 — Plan 06-01 complete (Discord 알림 통합 - EventNotifier + lifecycle callbacks)
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 21
-  completed_plans: 17
+  completed_plans: 19
   percent: 81
 ---
 
