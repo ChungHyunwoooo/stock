@@ -6,8 +6,10 @@ from engine.interfaces.discord.commands.paper_trading import PaperTradingPlugin
 from engine.interfaces.discord.commands.pattern import PatternCommandPlugin
 from engine.interfaces.discord.commands.runtime import RuntimeCommandPlugin
 from engine.interfaces.discord.commands.scanner import ScannerCommandPlugin
+from engine.interfaces.discord.commands.status import StatusCommandPlugin
 
 DEFAULT_COMMAND_PLUGINS = [
+    StatusCommandPlugin(),
     RuntimeCommandPlugin(),
     OrderCommandPlugin(),
     AnalysisCommandPlugin(),
@@ -28,4 +30,5 @@ __all__ = [
     "PatternCommandPlugin",
     "RuntimeCommandPlugin",
     "ScannerCommandPlugin",
+    "StatusCommandPlugin",
 ]

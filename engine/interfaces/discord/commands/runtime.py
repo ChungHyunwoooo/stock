@@ -4,16 +4,11 @@ from discord import Interaction, app_commands
 from engine.core import TradingMode
 from engine.interfaces.discord.autocomplete import mode_autocomplete
 from engine.interfaces.discord.context import DiscordBotContext
-from engine.interfaces.discord.formatting import format_runtime_state
 
 class RuntimeCommandPlugin:
     name = "runtime"
 
     def register(self, tree: app_commands.CommandTree, context: DiscordBotContext) -> None:
-        @tree.command(name="status", description="Show trading runtime status")
-        async def status(interaction: Interaction) -> None:
-            await interaction.response.send_message(format_runtime_state(context.control))
-
         @tree.command(name="pause", description="Pause automated processing")
         async def pause(interaction: Interaction) -> None:
             state = context.control.pause()
