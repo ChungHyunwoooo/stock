@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-03-11T09:40:56.622Z"
-last_activity: 2026-03-11 — Plan 02-05 complete (BacktestRecord schema extension + auto DB save + history comparison)
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-11T14:57:13.000Z"
+last_activity: 2026-03-11 — Plan 03-01 complete (PaperBroker DB persistence + PaperBalance/PaperPnlSnapshot models)
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
-  percent: 90
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** 수익을 주는 자동화 봇 — 전략 발굴부터 실매매까지 사람 개입 없이 돌아가되, 성과 저하 시 즉시 알림으로 제어권 유지
-**Current focus:** Phase 2 — Backtest Quality Gates
+**Current focus:** Phase 3 — Paper Trading Stage
 
 ## Current Position
 
-Phase: 2 of 8 (Backtest Quality Gates)
-Plan: 5 of 7 in current phase
+Phase: 3 of 8 (Paper Trading Stage)
+Plan: 1 of 2 in current phase
 Status: In Progress
-Last activity: 2026-03-11 — Plan 02-05 complete (BacktestRecord schema extension + auto DB save + history comparison)
+Last activity: 2026-03-11 — Plan 03-01 complete (PaperBroker DB persistence + PaperBalance/PaperPnlSnapshot models)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [█████████░] 90%
 | Phase 02 P01 | 5min | 2 tasks | 9 files |
 | Phase 02 P04 | 3min | 2 tasks | 2 files |
 | Phase 02 P05 | 4min | 2 tasks | 5 files |
+| Phase 03 P01 | 7min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,10 @@ Recent decisions affecting current work:
 - [02-05]: Auto-save uses try/except with logger.warning -- DB failure never blocks backtest result
 - [02-05]: Migration uses PRAGMA table_info + ALTER TABLE ADD COLUMN -- no Alembic dependency
 - [02-05]: slippage_model stored as class name (type().__name__) in BacktestRecord
+- [03-01]: strategy_id defaults to "default" for backward compatibility with existing PaperBroker() callers
+- [03-01]: DB failure in save_balance_snapshot never blocks trade execution (try/except + logger.warning)
+- [03-01]: PaperPnlSnapshot upsert via ORM query-then-update for SQLAlchemy session consistency
+- [03-01]: TradeRepository.list_open extended with strategy_name + broker filters (backward compatible)
 
 ### Pending Todos
 
@@ -93,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:29:08Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-03-11T14:57:13Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

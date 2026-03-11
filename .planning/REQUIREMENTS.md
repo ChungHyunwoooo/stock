@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Strategy Lifecycle
 
 - [x] **LIFE-01**: 전략 상태가 draft→testing→paper→active→archived 순서로만 전이되며, 규칙 위반 전이를 차단한다
-- [ ] **LIFE-02**: 페이퍼 트레이딩 단계에서 PaperBroker 상태가 세션 간 영속되고 PnL이 추적된다
+- [x] **LIFE-02**: 페이퍼 트레이딩 단계에서 PaperBroker 상태가 세션 간 영속되고 PnL이 추적된다
 - [ ] **LIFE-03**: Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준을 자동 검증하고, 미충족 시 승격을 차단한다
 - [x] **LIFE-04**: 논문/커뮤니티의 레퍼런스 전략을 JSON StrategyDefinition으로 변환하는 구조화된 워크플로우가 있다
 
@@ -73,7 +73,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | BT-04 | Phase 2 | Complete |
 | BT-05 | Phase 2 | Pending |
 | LIFE-01 | Phase 1 | Complete |
-| LIFE-02 | Phase 3 | Pending |
+| LIFE-02 | Phase 3 | Complete |
 | LIFE-03 | Phase 3 | Pending |
 | LIFE-04 | Phase 1 | Complete |
 | RISK-01 | Phase 5 | Pending |
