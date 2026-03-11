@@ -27,15 +27,15 @@
 **Requirements**: LIFE-01, LIFE-04
 **Success Criteria** (what must be TRUE):
   1. draft/testing/paper/active/archived 외의 전이를 시도하면 LifecycleManager가 예외를 발생시킨다
-  2. Discord /전략승격, /전략퇴출 커맨드로 전략 상태를 변경할 수 있고, 규칙 위반 시 커맨드가 거부된다
+  2. Discord /전략전이 커맨드로 전략 상태를 변경할 수 있고, 규칙 위반 시 커맨드가 거부된다
   3. 논문/커뮤니티 전략을 JSON StrategyDefinition으로 변환하는 워크플로우가 문서화되고 하나 이상의 레퍼런스 전략이 draft 상태로 등록된다
   4. registry.json에 모든 전략의 현재 상태가 기록되어 있고, LifecycleManager 외에는 이를 직접 수정할 수 없다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: StrategyStatus enum 확장 + LifecycleManager 구현 (전이 규칙 강제)
-- [ ] 01-02: Discord 생명주기 커맨드 추가 (/전략승격, /전략퇴출)
-- [ ] 01-03: 레퍼런스 전략 임포트 워크플로우 + 첫 번째 레퍼런스 전략 등록
+- [ ] 01-01-PLAN.md — StrategyStatus enum paper 추가 + LifecycleManager TDD 구현 (FSM 전이 규칙 강제)
+- [ ] 01-02-PLAN.md — Discord /전략전이 커맨드 + API 라우터 LifecycleManager 연동
+- [ ] 01-03-PLAN.md — RSI Divergence 레퍼런스 전략 생성 + draft 등록 (워크플로우 증명)
 
 ### Phase 2: Backtest Quality Gates
 **Goal**: 백테스트 결과가 실매매 비용과 과적합 위험을 반영하여 신뢰할 수 있는 전략 선별 기준이 된다
