@@ -7,13 +7,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+import logging
+
 from api.dependencies import get_db
 from engine.schema import StrategyDefinition
 from engine.core.db_models import StrategyRecord
 from engine.core.repository import StrategyRepository
+from engine.strategy.lifecycle_manager import (
+    InvalidTransitionError,
+    LifecycleManager,
+    StrategyNotFoundError,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 _repo = StrategyRepository()
+_lifecycle = LifecycleManager()
 
 class StrategyResponse(BaseModel):
     id: int
@@ -76,6 +86,19 @@ def update_status(
     record = _repo.get(db, strategy_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Strategy not found")
+
+    # If strategy exists in registry.json, validate transition via LifecycleManager
+    try:
+        _lifecycle.get_strategy(record.name)
+        # Strategy found in registry -- enforce FSM rules
+        try:
+            _lifecycle.transition(record.name, body.status, reason="API PATCH")
+        except InvalidTransitionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+    except StrategyNotFoundError:
+        # Not in registry.json -- use existing DB-only logic (no FSM validation)
+        pass
+
     _repo.update_status(db, strategy_id, body.status)
     record = _repo.get(db, strategy_id)
     return StrategyResponse.from_record(record)  # type: ignore[arg-type]
