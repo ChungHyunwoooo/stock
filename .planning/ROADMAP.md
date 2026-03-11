@@ -125,11 +125,11 @@ Plans:
   1. 탐색 실행 시 지정한 indicator 조합과 파라미터 범위를 자동 sweep하고, 기준 통과 후보가 draft 상태로 registry에 등록된다
   2. 탐색이 완료되면 Discord로 후보 전략 목록과 Sharpe 점수가 통보된다
   3. Bybit 또는 OKX 거래소를 설정에 추가하면 해당 거래소의 OHLCV 데이터 수급과 페이퍼 주문 실행이 동작한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: IndicatorSweeper 구현 (Optuna TPE, 워크포워드 + 멀티심볼 검증 내장)
-- [ ] 07-02: ccxt 멀티거래소 확장 (Bybit, OKX 데이터 수급 + 주문 실행)
+- [ ] 07-01-PLAN.md — IndicatorSweeper 구현 (Optuna TPE, 워크포워드 + 멀티심볼 검증 내장)
+- [ ] 07-02-PLAN.md — ccxt 멀티거래소 확장 (Bybit, OKX 데이터 수급 + 주문 실행)
 
 ### Phase 8: Monitoring Dashboard
 **Goal**: 웹 대시보드에서 전체 전략 파이프라인(탐색→백테스트→페이퍼→실매매)의 상태와 성과를 한눈에 확인하고 설정을 변경할 수 있다
