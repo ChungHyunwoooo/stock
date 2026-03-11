@@ -92,3 +92,28 @@ class BacktestHistoryPlugin:
             rows = compare_strategies(ids)
             embed = _build_compare_embed(rows)
             await interaction.followup.send(embed=embed)
+
+        @tree.command(
+            name="백테스트삭제",
+            description="백테스트 이력 삭제 (전략별 또는 단건)",
+        )
+        @app_commands.describe(
+            strategy_id="전략 ID (전략 전체 삭제)",
+            backtest_id="백테스트 ID (단건 삭제)",
+        )
+        async def backtest_delete(
+            interaction: Interaction,
+            strategy_id: int | None = None,
+            backtest_id: int | None = None,
+        ) -> None:
+            await interaction.response.defer()
+            from engine.backtest.history_cli import delete_history
+
+            delete_history(strategy_id=strategy_id, backtest_id=backtest_id)
+            if backtest_id is not None:
+                msg = f"백테스트 #{backtest_id} 삭제 완료"
+            elif strategy_id is not None:
+                msg = f"전략 {strategy_id}의 백테스트 이력 전체 삭제 완료"
+            else:
+                msg = "삭제 대상을 지정해주세요 (strategy_id 또는 backtest_id)"
+            await interaction.followup.send(msg)
