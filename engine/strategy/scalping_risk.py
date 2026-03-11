@@ -53,6 +53,31 @@ class ScalpRiskConfig:
     min_sl_pct: float = 0.1         # 최소 SL 0.1%
     max_sl_pct: float = 2.0         # 최대 SL 2.0%
 
+    @classmethod
+    def for_timeframe(cls, tf: str) -> ScalpRiskConfig:
+        """타임프레임별 최적 프리셋 반환.
+
+        - 1m/5m (스캘핑): 타이트 SL, 낮은 R:R
+        - 15m/30m (데이트레이딩): 기본값
+        - 1h/4h/1d (스윙): 넓은 SL, 높은 R:R
+        - 미지 타임프레임: 데이트레이딩 (안전 기본값)
+        """
+        presets = {
+            "1m": dict(sl_mult_min=0.5, sl_mult_max=1.5, rr_min=1.2, rr_max=2.5,
+                       min_sl_pct=0.05, max_sl_pct=0.5),
+            "5m": dict(sl_mult_min=0.5, sl_mult_max=1.5, rr_min=1.2, rr_max=2.5,
+                       min_sl_pct=0.05, max_sl_pct=0.5),
+            "1h": dict(sl_mult_min=1.5, sl_mult_max=4.0, rr_min=2.0, rr_max=5.0,
+                       min_sl_pct=0.5, max_sl_pct=5.0),
+            "4h": dict(sl_mult_min=1.5, sl_mult_max=4.0, rr_min=2.0, rr_max=5.0,
+                       min_sl_pct=0.5, max_sl_pct=5.0),
+            "1d": dict(sl_mult_min=1.5, sl_mult_max=4.0, rr_min=2.0, rr_max=5.0,
+                       min_sl_pct=0.5, max_sl_pct=5.0),
+        }
+        # 15m/30m은 기본값 사용 (데이트레이딩)
+        overrides = presets.get(tf, {})
+        return cls(**overrides)
+
 
 @dataclass(slots=True)
 class ScalpRiskResult:
@@ -191,12 +216,43 @@ def calculate_dynamic_leverage(
     return leverage
 
 
+def fractional_kelly(
+    win_rate: float,
+    avg_win: float,
+    avg_loss: float,
+    fraction: float = 0.25,
+) -> float:
+    """Fractional Kelly Criterion 포지션 사이징.
+
+    Kelly% = W - (1-W)/R  (W=승률, R=avg_win/avg_loss)
+    Fractional Kelly = Kelly% × fraction (과적합 방지)
+
+    Args:
+        win_rate: 승률 (0~1)
+        avg_win: 평균 이익 (절대값)
+        avg_loss: 평균 손실 (절대값, 양수)
+        fraction: Kelly 비율 (0.25 = Quarter Kelly)
+
+    Returns:
+        자본 대비 투입 비율 (0~1). 음수면 0 반환 (진입 불가 시장).
+    """
+    if avg_loss <= 0 or win_rate <= 0:
+        return 0.0
+    r = avg_win / avg_loss  # payoff ratio
+    kelly = win_rate - (1 - win_rate) / r
+    if kelly <= 0:
+        return 0.0
+    return min(kelly * fraction, 1.0)
+
+
 def calculate_scalp_risk(
     df: pd.DataFrame,
     entry_price: float,
     side: str,
     capital: float,
     config: ScalpRiskConfig | None = None,
+    kelly_fraction: float | None = None,
+    trade_stats: dict | None = None,
 ) -> ScalpRiskResult:
     """종합 스캘핑 리스크 계산 — 모든 파라미터가 데이터 기반.
 
@@ -206,6 +262,8 @@ def calculate_scalp_risk(
         side: "long" 또는 "short"
         capital: 가용 자본 (USDT)
         config: 리스크 범위 설정
+        kelly_fraction: Kelly 비율 (None이면 미사용, 0.25=Quarter Kelly)
+        trade_stats: {"win_rate": 0.6, "avg_win": 1.5, "avg_loss": 1.0} — Kelly 계산용
 
     Returns:
         ScalpRiskResult
@@ -233,11 +291,24 @@ def calculate_scalp_risk(
         if leverage > max_leverage_by_sl:
             leverage = max_leverage_by_sl
 
-    # 4. 포지션 사이징 (기존 모듈 활용)
+    # 4. 포지션 사이징
+    # Kelly Criterion 사용 가능 시 투입 비율 조정
+    effective_risk_pct = cfg.risk_per_trade_pct
+    if kelly_fraction is not None and trade_stats:
+        kelly_pct = fractional_kelly(
+            win_rate=trade_stats.get("win_rate", 0.5),
+            avg_win=trade_stats.get("avg_win", 1.0),
+            avg_loss=trade_stats.get("avg_loss", 1.0),
+            fraction=kelly_fraction,
+        )
+        if kelly_pct > 0:
+            effective_risk_pct = kelly_pct  # cap 제거 — RiskManager.position_size_factor()가 드로다운 시 축소
+            logger.info("Kelly 사이징: %.2f%% (원래 %.2f%%)", kelly_pct * 100, cfg.risk_per_trade_pct * 100)
+
     risk_params = RiskParams(
         stop_loss_pct=sl_pct / 100,
         take_profit_pct=tp_pct / 100,
-        risk_per_trade_pct=cfg.risk_per_trade_pct,
+        risk_per_trade_pct=effective_risk_pct,
     )
     quantity = calculate_position_size(capital, risk_params, entry_price, sl)
 
