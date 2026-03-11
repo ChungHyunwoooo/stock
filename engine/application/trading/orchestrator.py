@@ -1,8 +1,16 @@
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
+import pandas as pd
 
 from engine.core.models import OrderRequest, PendingOrder, TradingMode, TradingRuntimeState, TradingSignal
 from engine.core.ports import BrokerPort, NotificationPort, RuntimeStorePort
+
+if TYPE_CHECKING:
+    from engine.strategy.portfolio_risk import PortfolioRiskManager
 
 class TradingOrchestrator:
     def __init__(
@@ -10,10 +18,12 @@ class TradingOrchestrator:
         runtime_store: RuntimeStorePort,
         notifier: NotificationPort,
         broker: BrokerPort,
+        portfolio_risk: PortfolioRiskManager | None = None,
     ) -> None:
         self.runtime_store = runtime_store
         self.notifier = notifier
         self.broker = broker
+        self.portfolio_risk = portfolio_risk
 
     def process_signal(self, signal: TradingSignal, quantity: float = 1.0) -> TradingRuntimeState:
         state = self.runtime_store.load()
@@ -44,6 +54,19 @@ class TradingOrchestrator:
             self.notifier.send_pending(pending)
             return state
 
+        # Portfolio risk correlation gate (full_auto only)
+        if self.portfolio_risk is not None:
+            signal_returns = self._get_signal_returns(signal)
+            allowed, reason = self.portfolio_risk.check_correlation_gate(
+                signal.strategy_id, signal_returns,
+            )
+            if not allowed:
+                self.notifier.send_text(
+                    f"[PortfolioRisk] {signal.symbol} entry blocked: {reason}"
+                )
+                self.runtime_store.save(state)
+                return state
+
         order = self._build_order(signal, quantity)
         execution = self.broker.execute_order(order, state)
         state.executions.append(execution)
@@ -52,6 +75,14 @@ class TradingOrchestrator:
         self.notifier.send_signal(signal, mode_label=state.mode.value)
         self.notifier.send_execution(execution)
         return state
+
+    @staticmethod
+    def _get_signal_returns(signal: TradingSignal) -> pd.Series:
+        """signal.metadata에서 수익률 시계열 조회, 없으면 빈 Series."""
+        returns = signal.metadata.get("returns")
+        if isinstance(returns, pd.Series):
+            return returns
+        return pd.Series(dtype=float)
 
     @staticmethod
     def _build_order(signal: TradingSignal, quantity: float) -> OrderRequest:

@@ -181,3 +181,103 @@ class TestNotification:
         mgr.check_correlation_gate("strat_b", s2)
 
         notifier.send_text.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Integration: TradingOrchestrator + PortfolioRiskManager
+# ---------------------------------------------------------------------------
+
+class TestOrchestratorIntegration:
+    def _make_orchestrator(self, portfolio_risk=None):
+        """테스트용 TradingOrchestrator 생성."""
+        from engine.application.trading.orchestrator import TradingOrchestrator
+        from engine.core.models import (
+            BrokerKind,
+            ExecutionRecord,
+            SignalAction,
+            TradeSide,
+            TradingMode,
+            TradingRuntimeState,
+        )
+
+        runtime_store = MagicMock()
+        state = TradingRuntimeState(mode=TradingMode.auto)
+        runtime_store.load.return_value = state
+
+        notifier = MagicMock()
+        notifier.send_text.return_value = True
+        notifier.send_signal.return_value = True
+        notifier.send_execution.return_value = True
+
+        broker = MagicMock()
+        broker.execute_order.return_value = ExecutionRecord(
+            order_id="ord_1",
+            signal_id="sig_1",
+            symbol="BTCUSDT",
+            action=SignalAction.entry,
+            side=TradeSide.long,
+            quantity=0.01,
+            price=50000.0,
+            broker=BrokerKind.paper,
+            status="filled",
+        )
+
+        orch = TradingOrchestrator(
+            runtime_store=runtime_store,
+            notifier=notifier,
+            broker=broker,
+            portfolio_risk=portfolio_risk,
+        )
+        return orch, runtime_store, notifier, broker
+
+    def _make_signal(self):
+        from engine.core.models import SignalAction, TradeSide, TradingSignal
+        return TradingSignal(
+            strategy_id="strat_b",
+            symbol="BTCUSDT",
+            timeframe="15m",
+            action=SignalAction.entry,
+            side=TradeSide.long,
+            entry_price=50000.0,
+        )
+
+    def test_blocked_by_portfolio_risk(self):
+        """상관관계 차단 시 process_signal()이 execution 없이 state 반환."""
+        mock_pr = MagicMock()
+        mock_pr.check_correlation_gate.return_value = (False, "blocked: corr=0.85 with strat_a, threshold=0.7")
+
+        orch, runtime_store, notifier, broker = self._make_orchestrator(portfolio_risk=mock_pr)
+        signal = self._make_signal()
+
+        state = orch.process_signal(signal)
+
+        # broker.execute_order 미호출
+        broker.execute_order.assert_not_called()
+        # notifier.send_text 호출 (차단 알림)
+        notifier.send_text.assert_called_once()
+        assert "blocked" in notifier.send_text.call_args[0][0].lower()
+        # state 저장됨
+        runtime_store.save.assert_called_once()
+
+    def test_no_portfolio_risk_executes_normally(self):
+        """portfolio_risk=None 시 기존 동작 유지."""
+        orch, runtime_store, notifier, broker = self._make_orchestrator(portfolio_risk=None)
+        signal = self._make_signal()
+
+        state = orch.process_signal(signal)
+
+        broker.execute_order.assert_called_once()
+        assert len(state.executions) == 1
+
+    def test_allowed_by_portfolio_risk_executes(self):
+        """상관관계 통과 시 정상 실행."""
+        mock_pr = MagicMock()
+        mock_pr.check_correlation_gate.return_value = (True, "passed")
+
+        orch, runtime_store, notifier, broker = self._make_orchestrator(portfolio_risk=mock_pr)
+        signal = self._make_signal()
+
+        state = orch.process_signal(signal)
+
+        broker.execute_order.assert_called_once()
+        assert len(state.executions) == 1
