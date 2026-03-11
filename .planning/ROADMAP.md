@@ -95,11 +95,11 @@ Plans:
   1. 실매매 전략의 최근 20거래 윈도우 Sharpe/승률이 백테스트 기준 대비 15% 이상 하락하면 Discord WARNING 알림이 발송된다
   2. 롤링 30거래 Sharpe가 -0.5 미만이면 Discord CRITICAL 알림이 발송되고 해당 전략의 신규 진입이 자동 일시정지된다
   3. 성과 모니터는 실행 경로(TradingOrchestrator)에서 완전히 분리되어, 모니터 다운 시에도 실매매가 계속된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: StrategyPerformanceMonitor 구현 (APScheduler 15분 주기, 롤링 윈도우 계산)
-- [ ] 05-02: Discord 성과 저하 알림 (WARNING/CRITICAL 임계치 + 자동 일시정지)
+- [ ] 05-01-PLAN.md — StrategyPerformanceMonitor 구현 (데몬 스레드 15분 주기, 롤링 윈도우 계산 + per-strategy pause)
+- [ ] 05-02-PLAN.md — Discord 성과 저하 알림 (WARNING/CRITICAL embed + 자동 일시정지 연동)
 
 ### Phase 6: Alert & MTF Enrichment
 **Goal**: 매매 이벤트와 시스템 상태가 Discord로 실시간 통보되고, 단기 타임프레임 신호가 상위 타임프레임 방향으로 필터링된다
