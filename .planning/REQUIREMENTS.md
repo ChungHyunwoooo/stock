@@ -37,7 +37,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Strategy Discovery
 
-- [ ] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
+- [x] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
 - [ ] **DISC-02**: ccxt 기반으로 Binance/Upbit 외 거래소(Bybit, OKX 등)의 데이터 수급 및 주문 실행을 지원한다
 
 ## v2 Requirements
@@ -83,7 +83,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | MON-02 | Phase 6 | Pending |
 | MON-03 | Phase 8 | Pending |
 | MON-04 | Phase 6 | Pending |
-| DISC-01 | Phase 7 | Pending |
+| DISC-01 | Phase 7 | Complete |
 | DISC-02 | Phase 7 | Pending |
 
 **Coverage:**
