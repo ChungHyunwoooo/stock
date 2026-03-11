@@ -168,25 +168,60 @@ class MultiSymbolValidator:
             for sym in symbols
         ]
 
-        sharpe_per_symbol: dict[str, float] = {}
-
         logger.info(
             "멀티심볼 백테스트 시작: %d 심볼, %d workers",
             len(symbols), self._n_workers,
         )
 
+        results: list[tuple[str, float | None]] = []
         with ProcessPoolExecutor(max_workers=self._n_workers) as executor:
             futures = {
                 executor.submit(_run_symbol_backtest, t): t[1]
                 for t in tasks
             }
             for future in as_completed(futures):
-                symbol = futures[future]
-                sym, sharpe = future.result()
-                if sharpe is not None:
-                    sharpe_per_symbol[sym] = sharpe
-                else:
-                    logger.warning("심볼 %s 백테스트 실패 — skip", sym)
+                results.append(future.result())
+
+        return self._build_result(results, len(symbols))
+
+    def _validate_sequential(
+        self,
+        strategy_dict: dict,
+        symbols: list[str],
+        start: str,
+        end: str,
+        timeframe: str = "1d",
+        initial_capital: float = 10_000.0,
+        fee_rate: float = 0.0,
+    ) -> MultiSymbolResult:
+        """순차 실행 (테스트용) -- mock-friendly, no ProcessPoolExecutor.
+
+        동일 로직을 _run_symbol_backtest 직접 호출로 실행.
+        """
+        tasks = [
+            (strategy_dict, sym, start, end, timeframe, initial_capital, fee_rate)
+            for sym in symbols
+        ]
+
+        results: list[tuple[str, float | None]] = []
+        for t in tasks:
+            results.append(_run_symbol_backtest(t))
+
+        return self._build_result(results, len(symbols))
+
+    def _build_result(
+        self,
+        results: list[tuple[str, float | None]],
+        total_symbols: int,
+    ) -> MultiSymbolResult:
+        """worker 결과 수집 -> MultiSymbolResult 생성."""
+        sharpe_per_symbol: dict[str, float] = {}
+
+        for sym, sharpe in results:
+            if sharpe is not None:
+                sharpe_per_symbol[sym] = sharpe
+            else:
+                logger.warning("심볼 %s 백테스트 실패 -- skip", sym)
 
         # Compute median Sharpe from successful symbols
         if sharpe_per_symbol:
@@ -199,7 +234,7 @@ class MultiSymbolValidator:
 
         logger.info(
             "멀티심볼 결과: %d/%d 성공, median Sharpe=%.3f, %s",
-            len(sharpe_per_symbol), len(symbols),
+            len(sharpe_per_symbol), total_symbols,
             median_sharpe, "PASS" if passed else "FAIL",
         )
 

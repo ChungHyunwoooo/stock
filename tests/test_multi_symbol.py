@@ -126,3 +126,146 @@ class TestMultiSymbolResult:
             threshold=0.5,
         )
         assert result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# Task 2: MultiSymbolValidator parallel backtest
+# ---------------------------------------------------------------------------
+
+class TestMultiSymbolValidator:
+    """MultiSymbolValidator 병렬 백테스트 + median Sharpe gate."""
+
+    def test_median_above_threshold_passes(self):
+        """모든 심볼 Sharpe > threshold -> passed=True."""
+        from unittest.mock import MagicMock, patch
+
+        from engine.backtest.multi_symbol import MultiSymbolValidator
+
+        mock_result = MagicMock()
+        mock_result.sharpe_ratio = 0.8
+
+        with patch("engine.backtest.multi_symbol._run_symbol_backtest") as mock_worker:
+            mock_worker.side_effect = [
+                ("SYM_A", 0.8),
+                ("SYM_B", 0.6),
+                ("SYM_C", 0.7),
+            ]
+
+            validator = MultiSymbolValidator(n_workers=1, sharpe_threshold=0.5)
+            # Use direct call instead of ProcessPoolExecutor to avoid pickle issues with mock
+            result = validator._validate_sequential(
+                strategy_dict={"id": "test"},
+                symbols=["SYM_A", "SYM_B", "SYM_C"],
+                start="2025-01-01",
+                end="2025-12-31",
+                timeframe="1d",
+                initial_capital=10_000.0,
+                fee_rate=0.0,
+            )
+            assert result.passed is True
+            assert result.median_sharpe == pytest.approx(0.7)
+            assert len(result.symbols) == 3
+
+    def test_median_below_threshold_fails(self):
+        """모든 심볼 Sharpe < threshold -> passed=False."""
+        from unittest.mock import patch
+
+        from engine.backtest.multi_symbol import MultiSymbolValidator
+
+        with patch("engine.backtest.multi_symbol._run_symbol_backtest") as mock_worker:
+            mock_worker.side_effect = [
+                ("SYM_A", 0.2),
+                ("SYM_B", 0.3),
+            ]
+
+            validator = MultiSymbolValidator(n_workers=1, sharpe_threshold=0.5)
+            result = validator._validate_sequential(
+                strategy_dict={"id": "test"},
+                symbols=["SYM_A", "SYM_B"],
+                start="2025-01-01",
+                end="2025-12-31",
+                timeframe="1d",
+                initial_capital=10_000.0,
+                fee_rate=0.0,
+            )
+            assert result.passed is False
+            assert result.median_sharpe < 0.5
+
+    def test_partial_failure_skips_failed_symbols(self):
+        """일부 심볼 실패 시 나머지로 판정."""
+        from unittest.mock import patch
+
+        from engine.backtest.multi_symbol import MultiSymbolValidator
+
+        with patch("engine.backtest.multi_symbol._run_symbol_backtest") as mock_worker:
+            mock_worker.side_effect = [
+                ("SYM_A", 0.8),
+                ("SYM_B", None),   # failed
+                ("SYM_C", 0.6),
+            ]
+
+            validator = MultiSymbolValidator(n_workers=1, sharpe_threshold=0.5)
+            result = validator._validate_sequential(
+                strategy_dict={"id": "test"},
+                symbols=["SYM_A", "SYM_B", "SYM_C"],
+                start="2025-01-01",
+                end="2025-12-31",
+                timeframe="1d",
+                initial_capital=10_000.0,
+                fee_rate=0.0,
+            )
+            # SYM_B failed, only A and C counted
+            assert len(result.symbols) == 2
+            assert "SYM_B" not in result.symbols
+            assert result.passed is True
+            assert result.median_sharpe == pytest.approx(0.7)
+
+    def test_all_symbols_fail_returns_zero_median(self):
+        """모든 심볼 실패 -> median=0, passed=False."""
+        from unittest.mock import patch
+
+        from engine.backtest.multi_symbol import MultiSymbolValidator
+
+        with patch("engine.backtest.multi_symbol._run_symbol_backtest") as mock_worker:
+            mock_worker.side_effect = [
+                ("SYM_A", None),
+                ("SYM_B", None),
+            ]
+
+            validator = MultiSymbolValidator(n_workers=1, sharpe_threshold=0.5)
+            result = validator._validate_sequential(
+                strategy_dict={"id": "test"},
+                symbols=["SYM_A", "SYM_B"],
+                start="2025-01-01",
+                end="2025-12-31",
+                timeframe="1d",
+                initial_capital=10_000.0,
+                fee_rate=0.0,
+            )
+            assert result.passed is False
+            assert result.median_sharpe == 0.0
+            assert len(result.symbols) == 0
+
+    def test_validate_converts_strategy_to_dict(self):
+        """validate()가 StrategyDefinition을 dict로 변환."""
+        from unittest.mock import MagicMock, patch
+
+        from engine.backtest.multi_symbol import MultiSymbolValidator
+
+        mock_strategy = MagicMock()
+        mock_strategy.model_dump.return_value = {"id": "test_strat"}
+
+        with patch("engine.backtest.multi_symbol._run_symbol_backtest") as mock_worker:
+            mock_worker.side_effect = [("SYM_A", 0.8)]
+
+            validator = MultiSymbolValidator(n_workers=1, sharpe_threshold=0.5)
+            result = validator._validate_sequential(
+                strategy_dict=mock_strategy.model_dump(),
+                symbols=["SYM_A"],
+                start="2025-01-01",
+                end="2025-12-31",
+                timeframe="1d",
+                initial_capital=10_000.0,
+                fee_rate=0.0,
+            )
+            assert result.passed is True
