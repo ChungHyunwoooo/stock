@@ -1,0 +1,9 @@
+{
+  "binance": {
+    "spot": {"maker": 0.001, "taker": 0.001},
+    "futures": {"maker": 0.0002, "taker": 0.0005}
+  },
+  "upbit": {
+    "spot": {"maker": 0.0005, "taker": 0.0005}
+  }
+}
