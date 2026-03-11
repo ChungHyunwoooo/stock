@@ -49,9 +49,11 @@ class TestRiskParity:
 
     def test_max_allocation_cap(self):
         """Test 4: max_allocation_per_strategy=0.4 -> 어떤 전략도 0.4 초과 불가."""
+        # 3 strategies needed: max_cap=0.4, sum=1.0 feasible (3*0.4=1.2 >= 1.0)
         returns = {
-            "strat_a": _make_returns(60, 0.01, seed=1),  # low vol -> wants high weight
-            "strat_b": _make_returns(60, 0.05, seed=2),  # high vol -> low weight
+            "strat_a": _make_returns(60, 0.005, seed=1),  # very low vol -> wants ~0.7
+            "strat_b": _make_returns(60, 0.03, seed=2),   # medium vol
+            "strat_c": _make_returns(60, 0.05, seed=3),   # high vol -> low weight
         }
         config = RiskParityConfig(max_allocation_per_strategy=0.4)
         weights = calculate_risk_parity_weights(returns, config=config)
