@@ -81,11 +81,11 @@ Plans:
   1. 신규 진입 신호 발생 시 기존 활성 전략과의 신호 상관관계가 자동 계산되고, 0.7 초과이면 진입이 차단된다
   2. ATR 또는 Kelly fraction 기반으로 계산된 포지션 크기가 고정 2% 방식과 다른 값을 반환한다
   3. PortfolioRiskManager를 비활성화하면 상관관계 차단 없이 진입이 허용되어 게이트가 분리되어 있음을 확인할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: 변동성 기반 포지션 사이징 (ATR + Kelly fraction, RiskManager 통합)
-- [ ] 04-02: PortfolioRiskManager 구현 (상관관계 게이트 + TradingOrchestrator 연동)
+- [ ] 04-01-PLAN.md — 변동성 기반 포지션 사이징 (ATR+Kelly + Risk Parity 자본 배분 + RiskManager 곱산 통합)
+- [ ] 04-02-PLAN.md — PortfolioRiskManager 구현 (상관관계 게이트 + TradingOrchestrator 연동)
 
 ### Phase 5: Performance Monitoring
 **Goal**: 실매매 중인 전략의 성과 저하가 자동으로 감지되고 Discord 알림으로 즉시 통보된다
