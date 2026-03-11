@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-11T19:46:05.132Z"
-last_activity: 2026-03-11 — Plan 05-02 complete (Discord embed alert + auto-pause on performance degradation)
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-11T20:02:32.545Z"
+last_activity: 2026-03-11 — Plan 06-01 complete (Discord 알림 통합 - EventNotifier + lifecycle callbacks)
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 21
-  completed_plans: 16
-  percent: 76
+  completed_plans: 17
+  percent: 81
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** 수익을 주는 자동화 봇 — 전략 발굴부터 실매매까지 사람 개입 없이 돌아가되, 성과 저하 시 즉시 알림으로 제어권 유지
-**Current focus:** Phase 5 — Performance Monitoring
+**Current focus:** Phase 6 — Alert & MTF Enrichment
 
 ## Current Position
 
-Phase: 5 of 8 (Performance Monitoring) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-11 — Plan 05-02 complete (Discord embed alert + auto-pause on performance degradation)
+Phase: 6 of 8 (Alert & MTF Enrichment)
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-03-11 — Plan 06-01 complete (Discord 알림 통합 - EventNotifier + lifecycle callbacks)
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 76%
 | Phase 04 P02 | 4min | 2 tasks | 3 files |
 | Phase 05 P01 | 2min | 1 tasks | 5 files |
 | Phase 05 P02 | 2min | 1 tasks | 4 files |
+| Phase 06 P01 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [05-01]: Daemon thread with per-strategy try/except -- one failure never blocks others
 - [05-02]: getattr for snapshot fields in Discord notifier -- avoids circular import of PerformanceSnapshot
 - [05-02]: send_performance_alert replaces send_text in handlers -- richer embed vs plain text
+- [Phase 06-01]: EventNotifier wraps NotificationPort.send_text() -- no port interface changes
+- [Phase 06-01]: LifecycleManager callbacks use try/except -- callback failure never blocks transition
+- [Phase 06-01]: TradingOrchestrator event_notifier defaults to None for backward compatibility
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:42:00Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-11T20:02:32.542Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None

@@ -30,7 +30,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Monitoring & Alerts
 
-- [ ] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
+- [x] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
 - [ ] **MON-02**: Discord /status 커맨드로 현재 포지션, 일일 PnL, 전략 상태를 즉시 조회할 수 있다
 - [ ] **MON-03**: 웹 대시보드에서 실시간 포지션, 전략 성과, 시스템 상태, 전략 탐색 현황, 설정을 확인/변경할 수 있다
 - [ ] **MON-04**: 단기 타임프레임 진입 신호를 상위 타임프레임 방향 확인으로 필터링할 수 있다 (MTF confirmation gate)
@@ -79,7 +79,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | RISK-01 | Phase 5 | Complete |
 | RISK-02 | Phase 4 | Complete |
 | RISK-03 | Phase 4 | Complete |
-| MON-01 | Phase 6 | Pending |
+| MON-01 | Phase 6 | Complete |
 | MON-02 | Phase 6 | Pending |
 | MON-03 | Phase 8 | Pending |
 | MON-04 | Phase 6 | Pending |
