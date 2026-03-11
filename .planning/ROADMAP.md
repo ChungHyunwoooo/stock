@@ -47,14 +47,14 @@ Plans:
   3. 2-3개 비상관 심볼에 동시 백테스트를 실행하면 심볼별 Sharpe와 중앙값 기준 통과 여부가 자동 판정된다
   4. 백테스트 실행마다 결과가 DB에 저장되고, 전략별 이력 비교를 조회할 수 있다
   5. CPCV 모드를 선택하면 기본 워크포워드 대신 조합형 퍼지 교차검증이 실행된다
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 02-01: SlippageModel 인터페이스 + VolumeAdjustedSlippage 구현 + BacktestRunner 통합
-- [ ] 02-02: 워크포워드 OOS 검증기 구현 (IS/OOS 분할, 성과 갭 임계치)
-- [ ] 02-03: 멀티심볼 병렬 백테스트 + 중앙 Sharpe 기준 안정성 검증
-- [ ] 02-04: 백테스트 결과 DB 저장 + 이력 비교 조회
-- [ ] 02-05: CPCV 구현 (조합형 퍼지 교차검증 모드)
+- [ ] 02-01-PLAN.md — SlippageModel 프로토콜 + VolumeAdjustedSlippage + FeeModel + BacktestRunner 통합 (BT-01)
+- [ ] 02-02-PLAN.md — WalkForwardValidator 구현 (IS/OOS 분할, 성과 갭 임계치 판정) (BT-02)
+- [ ] 02-03-PLAN.md — CPCVValidator 구현 (조합형 퍼지 교차검증 모드) (BT-05)
+- [ ] 02-04-PLAN.md — MultiSymbolValidator 구현 (상관계수 심볼 선택 + 병렬 백테스트 + 중앙 Sharpe 게이트) (BT-03)
+- [ ] 02-05-PLAN.md — BacktestRecord 스키마 확장 + 자동 DB 저장 + 이력 비교 조회 (BT-04)
 
 ### Phase 3: Paper Trading Stage
 **Goal**: 백테스트를 통과한 전략이 실자본 투입 전 실시간 시장에서 최소 기간 검증을 받고, 정량 기준 충족 시에만 실매매로 승격된다
