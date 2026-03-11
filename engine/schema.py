@@ -134,5 +134,6 @@ class StrategyDefinition(BaseModel):
     risk: RiskParams = Field(default_factory=RiskParams)
     metadata: StrategyMeta = Field(default_factory=StrategyMeta)
     regime: RegimeConfig | None = None
+    promotion_gates: dict[str, float] | None = None
 
     model_config = {"json_schema_serialization": "always"}

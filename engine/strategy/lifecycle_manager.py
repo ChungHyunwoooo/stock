@@ -59,8 +59,19 @@ class LifecycleManager:
 
     # -- public API ----------------------------------------------------------
 
-    def transition(self, strategy_id: str, target: str, reason: str = "") -> dict:
+    def transition(
+        self,
+        strategy_id: str,
+        target: str,
+        reason: str = "",
+        gate: "PromotionGate | None" = None,
+        gate_config: "PromotionConfig | None" = None,
+        session: "Session | None" = None,
+    ) -> dict:
         """Transition a strategy to *target* status, recording history.
+
+        For paper->active transitions, *gate* is required. The gate evaluates
+        promotion criteria and blocks the transition if criteria are not met.
 
         Raises InvalidTransitionError for disallowed transitions.
         Raises StrategyNotFoundError if *strategy_id* is absent.
@@ -85,6 +96,20 @@ class LifecycleManager:
             raise InvalidTransitionError(
                 f"{strategy_id}: {current_status.value} -> {target_status.value} 전이 불가"
             )
+
+        # paper->active: enforce promotion gate
+        if current_status == StrategyStatus.paper and target_status == StrategyStatus.active:
+            if gate is None:
+                raise InvalidTransitionError(
+                    "paper->active 전이에는 PromotionGate가 필요합니다"
+                )
+            if gate_config is None or session is None:
+                raise InvalidTransitionError(
+                    "paper->active 전이에는 gate_config와 session이 필요합니다"
+                )
+            result = gate.evaluate(strategy_id, gate_config, session)
+            if not result.passed:
+                raise InvalidTransitionError(f"승격 기준 미충족: {result.summary}")
 
         entry["status"] = target_status.value
         history = entry.setdefault("status_history", [])
