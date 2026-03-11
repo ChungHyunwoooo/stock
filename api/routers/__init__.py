@@ -1,4 +1,4 @@
 
-from api.routers import backtests, knowledge, strategies
+from api.routers import backtests, knowledge, paper, strategies
 
-__all__ = ["strategies", "backtests", "knowledge"]
+__all__ = ["strategies", "backtests", "knowledge", "paper"]
