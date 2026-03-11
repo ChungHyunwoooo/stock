@@ -1,0 +1,122 @@
+"""Tests for EventNotifier -- verifies 4 event type message formats."""
+
+from __future__ import annotations
+
+from engine.core.models import BrokerKind, ExecutionRecord, SignalAction, TradeSide
+from engine.notifications.discord_webhook import MemoryNotifier
+from engine.notifications.event_notifier import EventNotifier
+
+
+def _make_notifier() -> tuple[EventNotifier, MemoryNotifier]:
+    mem = MemoryNotifier()
+    return EventNotifier(mem), mem
+
+
+class TestNotifyExecution:
+    def test_execution_message_format(self) -> None:
+        en, mem = _make_notifier()
+        execution = ExecutionRecord(
+            order_id="ord-001",
+            signal_id="sig-001",
+            symbol="BTC/USDT",
+            action=SignalAction.entry,
+            side=TradeSide.long,
+            quantity=0.5,
+            price=65000.0,
+            broker=BrokerKind.paper,
+            status="filled",
+        )
+        result = en.notify_execution(execution)
+
+        assert result is True
+        assert len(mem.messages) == 1
+        msg = mem.messages[0]
+        assert "[EXECUTION]" in msg
+        assert "BTC/USDT" in msg
+        assert "LONG" in msg
+        assert "0.5" in msg
+        assert "65,000.0000" in msg
+        assert "paper" in msg
+
+
+class TestNotifyLifecycleTransition:
+    def test_transition_message_format(self) -> None:
+        en, mem = _make_notifier()
+        result = en.notify_lifecycle_transition(
+            "rsi_divergence", "testing", "paper", reason="backtest passed"
+        )
+
+        assert result is True
+        assert len(mem.messages) == 1
+        msg = mem.messages[0]
+        assert "[LIFECYCLE]" in msg
+        assert "rsi_divergence" in msg
+        assert "testing -> paper" in msg
+        assert "backtest passed" in msg
+
+    def test_transition_without_reason(self) -> None:
+        en, mem = _make_notifier()
+        en.notify_lifecycle_transition("ema_cross", "draft", "testing")
+
+        msg = mem.messages[0]
+        assert "[LIFECYCLE]" in msg
+        assert "ema_cross: draft -> testing" in msg
+        assert "(" not in msg
+
+
+class TestNotifySystemError:
+    def test_warning_message_format(self) -> None:
+        en, mem = _make_notifier()
+        result = en.notify_system_error(
+            "ScalpingRunner", "WebSocket timeout after 30s"
+        )
+
+        assert result is True
+        msg = mem.messages[0]
+        assert "[WARNING]" in msg
+        assert "ScalpingRunner" in msg
+        assert "WebSocket timeout after 30s" in msg
+
+    def test_critical_severity(self) -> None:
+        en, mem = _make_notifier()
+        en.notify_system_error("DBPool", "Connection pool exhausted", severity="CRITICAL")
+
+        msg = mem.messages[0]
+        assert "[CRITICAL]" in msg
+        assert "DBPool" in msg
+
+
+class TestNotifyBacktestComplete:
+    def test_backtest_message_format(self) -> None:
+        en, mem = _make_notifier()
+        result = en.notify_backtest_complete(
+            strategy_id="rsi_divergence",
+            symbol="BTC/USDT",
+            sharpe=1.23,
+            total_return=0.152,
+            max_dd=-0.081,
+        )
+
+        assert result is True
+        msg = mem.messages[0]
+        assert "[BACKTEST]" in msg
+        assert "rsi_divergence" in msg
+        assert "BTC/USDT" in msg
+        assert "Sharpe 1.23" in msg
+        assert "Return +15.2%" in msg
+        assert "MaxDD -8.1%" in msg
+
+    def test_backtest_with_none_values(self) -> None:
+        en, mem = _make_notifier()
+        en.notify_backtest_complete(
+            strategy_id="test_strat",
+            symbol="ETH/USDT",
+            sharpe=None,
+            total_return=0.05,
+            max_dd=None,
+        )
+
+        msg = mem.messages[0]
+        assert "Sharpe N/A" in msg
+        assert "MaxDD N/A" in msg
+        assert "Return +5.0%" in msg
