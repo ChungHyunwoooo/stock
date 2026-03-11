@@ -31,6 +31,9 @@ class NotificationPort(Protocol):
     def send_text(self, message: str) -> bool:
         ...
 
+    def send_performance_alert(self, snapshot: "PerformanceSnapshot") -> bool:
+        ...
+
 
 class BrokerPort(Protocol):
     def execute_order(self, order: OrderRequest, state: TradingRuntimeState) -> ExecutionRecord:

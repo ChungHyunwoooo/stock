@@ -305,3 +305,155 @@ class TestOrchestratorSkipsPausedStrategy:
         result = orch.process_signal(signal)
 
         broker.execute_order.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Discord embed alert + auto-pause (05-02)
+# ---------------------------------------------------------------------------
+
+
+def _make_snapshot(
+    strategy_id: str = "strat_a",
+    alert_level: str = "none",
+    rolling_sharpe: float | None = 0.5,
+    baseline_sharpe: float | None = 1.0,
+    degradation_pct_sharpe: float | None = None,
+    rolling_win_rate: float | None = 0.6,
+    baseline_win_rate: float | None = 0.7,
+    degradation_pct_win_rate: float | None = None,
+) -> PerformanceSnapshot:
+    return PerformanceSnapshot(
+        strategy_id=strategy_id,
+        rolling_sharpe=rolling_sharpe,
+        baseline_sharpe=baseline_sharpe,
+        degradation_pct_sharpe=degradation_pct_sharpe,
+        rolling_win_rate=rolling_win_rate,
+        baseline_win_rate=baseline_win_rate,
+        degradation_pct_win_rate=degradation_pct_win_rate,
+        alert_level=alert_level,
+    )
+
+
+class TestWarningAlert:
+    def test_warning_sends_alert(self):
+        """WARNING snapshot -> MemoryNotifier에 perf_alert:warning 기록."""
+        from engine.notifications.discord_webhook import MemoryNotifier
+
+        notifier = MemoryNotifier()
+        snap = _make_snapshot(alert_level="warning", strategy_id="s1")
+
+        result = notifier.send_performance_alert(snap)
+
+        assert result is True
+        assert any("perf_alert:warning:s1" in m for m in notifier.messages)
+
+
+class TestCriticalAlert:
+    def test_critical_sends_alert_and_pauses(self):
+        """CRITICAL snapshot -> alert + paused_strategies에 추가."""
+        from engine.notifications.discord_webhook import MemoryNotifier
+
+        notifier = MemoryNotifier()
+        runtime_store = MagicMock()
+        state = TradingRuntimeState()
+        runtime_store.load.return_value = state
+
+        monitor = _build_monitor()
+        monitor.notifier = notifier
+        monitor.runtime_store = runtime_store
+
+        snap = _make_snapshot(alert_level="critical", strategy_id="s2")
+        monitor._handle_critical(snap.strategy_id, snap)
+
+        assert any("perf_alert:critical:s2" in m for m in notifier.messages)
+        assert "s2" in state.paused_strategies
+
+    def test_healthy_no_alert(self):
+        """alert_level='none' -> 알림 미발송."""
+        from engine.notifications.discord_webhook import MemoryNotifier
+
+        notifier = MemoryNotifier()
+        snap = _make_snapshot(alert_level="none", strategy_id="s3")
+
+        result = notifier.send_performance_alert(snap)
+
+        assert result is True
+        assert not any("perf_alert" in m for m in notifier.messages)
+
+
+class TestDiscordEmbed:
+    def test_discord_embed_warning_color(self):
+        """WARNING embed color=0xFFA500."""
+        from engine.notifications.discord_webhook import DiscordWebhookNotifier
+
+        notifier = DiscordWebhookNotifier()
+        snap = _make_snapshot(alert_level="warning", strategy_id="s1")
+
+        with patch.object(notifier, "_post", return_value=True) as mock_post:
+            notifier.send_performance_alert(snap)
+            payload = mock_post.call_args[0][0]
+            embed = payload["embeds"][0]
+            assert embed["color"] == 0xFFA500
+            assert "[WARNING]" in embed["title"]
+
+    def test_discord_embed_critical_color(self):
+        """CRITICAL embed color=0xFF0000."""
+        from engine.notifications.discord_webhook import DiscordWebhookNotifier
+
+        notifier = DiscordWebhookNotifier()
+        snap = _make_snapshot(alert_level="critical", strategy_id="s1")
+
+        with patch.object(notifier, "_post", return_value=True) as mock_post:
+            notifier.send_performance_alert(snap)
+            payload = mock_post.call_args[0][0]
+            embed = payload["embeds"][0]
+            assert embed["color"] == 0xFF0000
+            assert "[CRITICAL]" in embed["title"]
+
+    def test_embed_fields_contain_metrics(self):
+        """embed fields에 Sharpe/승률/저하율 포함."""
+        from engine.notifications.discord_webhook import DiscordWebhookNotifier
+
+        notifier = DiscordWebhookNotifier()
+        snap = _make_snapshot(
+            alert_level="warning",
+            rolling_sharpe=0.5,
+            baseline_sharpe=1.0,
+            degradation_pct_sharpe=0.5,
+            rolling_win_rate=0.4,
+            baseline_win_rate=0.6,
+            degradation_pct_win_rate=0.33,
+        )
+
+        with patch.object(notifier, "_post", return_value=True) as mock_post:
+            notifier.send_performance_alert(snap)
+            payload = mock_post.call_args[0][0]
+            embed = payload["embeds"][0]
+            field_names = [f["name"] for f in embed["fields"]]
+            # Must contain key metric fields
+            assert any("Sharpe" in n for n in field_names)
+            assert any("승률" in n or "Win" in n for n in field_names)
+
+
+class TestMultipleStrategiesIndependent:
+    def test_only_critical_strategy_paused(self):
+        """2개 전략 중 1개만 CRITICAL -> 해당 전략만 pause."""
+        from engine.notifications.discord_webhook import MemoryNotifier
+
+        notifier = MemoryNotifier()
+        runtime_store = MagicMock()
+        state = TradingRuntimeState()
+        runtime_store.load.return_value = state
+
+        monitor = _build_monitor()
+        monitor.notifier = notifier
+        monitor.runtime_store = runtime_store
+
+        # Only s_bad is critical
+        snap_bad = _make_snapshot(alert_level="critical", strategy_id="s_bad")
+        snap_good = _make_snapshot(alert_level="none", strategy_id="s_good")
+
+        monitor._handle_critical(snap_bad.strategy_id, snap_bad)
+
+        assert "s_bad" in state.paused_strategies
+        assert "s_good" not in state.paused_strategies

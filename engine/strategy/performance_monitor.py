@@ -200,20 +200,17 @@ class StrategyPerformanceMonitor:
         state.paused_strategies.add(strategy_id)
         self.runtime_store.save(state)
 
-        self.notifier.send_text(
-            f"[CRITICAL] Strategy {strategy_id} paused: "
-            f"rolling Sharpe={snap.rolling_sharpe:.3f}, "
-            f"win_rate={snap.rolling_win_rate:.1%}"
+        self.notifier.send_performance_alert(snap)
+        logger.warning(
+            "Strategy %s auto-paused: rolling Sharpe %.3f < %.1f",
+            strategy_id,
+            snap.rolling_sharpe or 0.0,
+            self.config.critical_sharpe,
         )
-        logger.warning("Strategy %s paused (critical)", strategy_id)
 
     def _handle_warning(self, strategy_id: str, snap: PerformanceSnapshot) -> None:
         """Notify on warning-level degradation (no pause)."""
-        self.notifier.send_text(
-            f"[WARNING] Strategy {strategy_id} degradation: "
-            f"Sharpe drop={snap.degradation_pct_sharpe or 0:.1%}, "
-            f"WinRate drop={snap.degradation_pct_win_rate or 0:.1%}"
-        )
+        self.notifier.send_performance_alert(snap)
         logger.info("Strategy %s warning", strategy_id)
 
     # -- daemon --------------------------------------------------------------

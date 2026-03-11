@@ -49,6 +49,57 @@ class DiscordWebhookNotifier(NotificationPort):
     def send_text(self, message: str, timeframe: str | None = None) -> bool:
         return self._post({"content": message}, timeframe=timeframe)
 
+    def send_performance_alert(self, snapshot: object) -> bool:
+        """Send a performance degradation embed alert.
+
+        *snapshot* is a ``PerformanceSnapshot`` (imported lazily to avoid
+        circular imports).
+        """
+        level: str = getattr(snapshot, "alert_level", "none")
+        if level == "none":
+            return True
+
+        sid = getattr(snapshot, "strategy_id", "unknown")
+        rolling_sharpe = getattr(snapshot, "rolling_sharpe", None)
+        baseline_sharpe = getattr(snapshot, "baseline_sharpe", None)
+        deg_sharpe = getattr(snapshot, "degradation_pct_sharpe", None)
+        rolling_wr = getattr(snapshot, "rolling_win_rate", None)
+        baseline_wr = getattr(snapshot, "baseline_win_rate", None)
+        deg_wr = getattr(snapshot, "degradation_pct_win_rate", None)
+
+        if level == "critical":
+            color = 0xFF0000
+            title = f"[CRITICAL] {sid} 성과 저하 - 진입 일시정지"
+        else:
+            color = 0xFFA500
+            title = f"[WARNING] {sid} 성과 저하"
+
+        def _fmt(val: float | None, pct: bool = False) -> str:
+            if val is None:
+                return "N/A"
+            return f"{val:.1%}" if pct else f"{val:.4f}"
+
+        fields = [
+            {"name": "현재 Sharpe", "value": _fmt(rolling_sharpe), "inline": True},
+            {"name": "기준 Sharpe", "value": _fmt(baseline_sharpe), "inline": True},
+            {"name": "Sharpe 저하율", "value": _fmt(deg_sharpe, pct=True), "inline": True},
+            {"name": "현재 승률 (Win Rate)", "value": _fmt(rolling_wr, pct=True), "inline": True},
+            {"name": "기준 승률", "value": _fmt(baseline_wr, pct=True), "inline": True},
+            {"name": "승률 저하율", "value": _fmt(deg_wr, pct=True), "inline": True},
+            {"name": "Alert Level", "value": level.upper(), "inline": True},
+        ]
+
+        from datetime import datetime, timezone
+
+        embed = {
+            "title": title,
+            "color": color,
+            "fields": fields,
+            "footer": {"text": f"StrategyPerformanceMonitor | {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"},
+        }
+        payload = {"embeds": [embed]}
+        return self._post(payload)
+
     def _post(self, payload: dict, timeframe: str | None = None, chart_data: bytes | None = None) -> bool:
         url = self._load_webhook_url(timeframe=timeframe)
         if not url:
@@ -131,4 +182,12 @@ class MemoryNotifier(NotificationPort):
 
     def send_text(self, message: str) -> bool:
         self.messages.append(message)
+        return True
+
+    def send_performance_alert(self, snapshot: object) -> bool:
+        level: str = getattr(snapshot, "alert_level", "none")
+        if level == "none":
+            return True
+        sid = getattr(snapshot, "strategy_id", "unknown")
+        self.messages.append(f"perf_alert:{level}:{sid}")
         return True
