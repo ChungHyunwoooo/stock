@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from engine.backtest.metrics import compute_max_drawdown, compute_sharpe_ratio, compute_total_return
+from engine.backtest.slippage import NoSlippage, SlippageModel
 from engine.data.provider_base import get_provider
 from engine.schema import StrategyDefinition
 from engine.strategy.strategy_evaluator import StrategyEngine
@@ -59,8 +60,14 @@ class BacktestResult:
 class BacktestRunner:
     """Runs a strategy definition against historical OHLCV data."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        slippage_model: SlippageModel | None = None,
+        fee_rate: float = 0.0,
+    ) -> None:
         self._strategy_engine = StrategyEngine()
+        self._slippage_model: SlippageModel = slippage_model or NoSlippage()
+        self._fee_rate = fee_rate
 
     @staticmethod
     def _infer_market(symbol: str, strategy: StrategyDefinition) -> str:
@@ -110,7 +117,7 @@ class BacktestRunner:
 
         df = self._strategy_engine.generate_signals(strategy, df)
 
-        equity_curve, trades = self._simulate(df, initial_capital, exposure_series)
+        equity_curve, trades = self._simulate(df, initial_capital, exposure_series, symbol=symbol)
 
         total_return = compute_total_return(equity_curve)
         sharpe = compute_sharpe_ratio(equity_curve)
@@ -135,11 +142,17 @@ class BacktestRunner:
         df: pd.DataFrame,
         initial_capital: float,
         exposure_series: pd.Series | None = None,
+        *,
+        symbol: str = "",
     ) -> tuple[pd.Series, list[TradeRecord]]:
         """Simple long-only simulation using close prices at signal bars.
 
         Position is 100% of capital on each trade (no partial sizing here),
         optionally scaled by a regime exposure fraction.
+
+        Slippage and fees are applied when ``self._slippage_model`` /
+        ``self._fee_rate`` are configured (defaults preserve original
+        behaviour).
         """
         capital = initial_capital
         equity_values: list[float] = []
@@ -157,7 +170,17 @@ class BacktestRunner:
 
             if not in_position and signal == 1:
                 in_position = True
-                entry_price = close
+
+                # --- slippage on entry ---
+                slippage_pct = self._slippage_model.calculate_slippage(
+                    symbol, "buy", capital, close,
+                )
+                entry_price = close * (1 + slippage_pct)
+
+                # --- fee on entry ---
+                entry_fee = capital * self._fee_rate
+                capital -= entry_fee
+
                 entry_date = date_str
                 # Apply exposure scaling
                 if exposure_series is not None:
@@ -171,14 +194,25 @@ class BacktestRunner:
                     position_exposure = 1.0
 
             elif in_position and signal == -1:
-                pnl_pct = (close - entry_price) / entry_price if entry_price != 0 else 0.0
+                # --- slippage on exit ---
+                slippage_pct = self._slippage_model.calculate_slippage(
+                    symbol, "sell", capital, close,
+                )
+                exit_price = close * (1 - slippage_pct)
+
+                pnl_pct = (exit_price - entry_price) / entry_price if entry_price != 0 else 0.0
                 capital = capital * (1 + pnl_pct * position_exposure)
+
+                # --- fee on exit ---
+                exit_fee = capital * self._fee_rate
+                capital -= exit_fee
+
                 trades.append(
                     TradeRecord(
                         entry_date=entry_date,
                         exit_date=date_str,
                         entry_price=entry_price,
-                        exit_price=close,
+                        exit_price=exit_price,
                         pnl_pct=pnl_pct,
                     )
                 )
@@ -195,14 +229,24 @@ class BacktestRunner:
         if in_position and len(df) > 0:
             last_close = float(df["close"].iloc[-1])
             last_date = str(df.index[-1])[:10]
-            pnl_pct = (last_close - entry_price) / entry_price if entry_price != 0 else 0.0
+
+            slippage_pct = self._slippage_model.calculate_slippage(
+                symbol, "sell", capital, last_close,
+            )
+            exit_price = last_close * (1 - slippage_pct)
+
+            pnl_pct = (exit_price - entry_price) / entry_price if entry_price != 0 else 0.0
             capital = capital * (1 + pnl_pct * position_exposure)
+
+            exit_fee = capital * self._fee_rate
+            capital -= exit_fee
+
             trades.append(
                 TradeRecord(
                     entry_date=entry_date,
                     exit_date=last_date,
                     entry_price=entry_price,
-                    exit_price=last_close,
+                    exit_price=exit_price,
                     pnl_pct=pnl_pct,
                 )
             )
