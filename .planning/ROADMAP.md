@@ -67,11 +67,11 @@ Plans:
   2. 페이퍼 트레이딩 중인 전략의 누적 PnL과 거래 건수를 실시간으로 조회할 수 있다
   3. Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준이 자동 검증되고, 미충족 시 승격 커맨드가 거부된다
   4. 기준 통과 시 Discord로 "승격 가능" 알림이 발송되고, 사람이 /전략승격을 실행해야 실매매가 시작된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: PaperBroker 상태 영속화 (SQLite, 세션 간 PnL/포지션 보존)
-- [ ] 03-02: Paper→Live 승격 게이트 (Sharpe/승률/기간/DD 자동 검증 + Discord 알림)
+- [ ] 03-01-PLAN.md — PaperBroker DB 영속화 (SQLite 테이블 + PaperRepository + PnL 이중 기록)
+- [ ] 03-02-PLAN.md — PromotionGate + LifecycleManager 통합 + 3채널 인터페이스 (CLI/API/Discord)
 
 ### Phase 4: Portfolio Risk
 **Goal**: 여러 전략이 동시에 실행될 때 상관 진입이 차단되고 변동성 기반 포지션 사이징이 적용되어 포트폴리오 전체 리스크가 관리된다
