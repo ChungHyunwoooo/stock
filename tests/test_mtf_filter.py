@@ -199,3 +199,88 @@ class TestTimeframeToMinutes:
     def test_unknown_raises(self):
         with pytest.raises(ValueError):
             _timeframe_to_minutes("2d")
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator integration
+# ---------------------------------------------------------------------------
+
+from engine.application.trading import TradingControlService, TradingOrchestrator
+from engine.core import SignalAction, TradingMode, TradingSignal
+from engine.execution import PaperBroker
+from engine.notifications import MemoryNotifier
+from engine.core import JsonRuntimeStore
+
+
+def _make_signal(side: TradeSide = TradeSide.long) -> TradingSignal:
+    return TradingSignal(
+        strategy_id="test:1.0",
+        symbol="BTC/USDT",
+        timeframe="5m",
+        action=SignalAction.entry,
+        side=side,
+        entry_price=100.0,
+        stop_loss=95.0,
+        take_profits=[110.0],
+        reason="test signal",
+    )
+
+
+class TestOrchestratorMTFIntegration:
+    """Orchestrator + MTFConfirmationGate 통합 테스트."""
+
+    def test_aligned_signal_executes(self, tmp_path):
+        """정렬된 신호 -> 주문 실행."""
+        store = JsonRuntimeStore(tmp_path / "runtime.json")
+        notifier = MemoryNotifier()
+        broker = PaperBroker()
+        control = TradingControlService(store, notifier, broker)
+        control.set_mode(TradingMode.auto)
+
+        # 상승 추세 -> LONG 정렬
+        prices = list(range(50, 80))
+        provider = _mock_provider(prices)
+        mtf = MTFConfirmationGate(
+            MTFConfig(enabled=True, higher_timeframe="4h", ema_period=20),
+            data_provider=provider,
+        )
+        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=mtf)
+        state = orchestrator.process_signal(_make_signal(TradeSide.long))
+
+        assert len(state.executions) == 1
+
+    def test_opposing_signal_blocked(self, tmp_path):
+        """반대 방향 신호 -> 차단, notifier에 [MTF] 메시지."""
+        store = JsonRuntimeStore(tmp_path / "runtime.json")
+        notifier = MemoryNotifier()
+        broker = PaperBroker()
+        control = TradingControlService(store, notifier, broker)
+        control.set_mode(TradingMode.auto)
+
+        # 상승 추세 -> SHORT 반대
+        prices = list(range(50, 80))
+        provider = _mock_provider(prices)
+        mtf = MTFConfirmationGate(
+            MTFConfig(enabled=True, higher_timeframe="4h", ema_period=20),
+            data_provider=provider,
+        )
+        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=mtf)
+        state = orchestrator.process_signal(_make_signal(TradeSide.short))
+
+        assert len(state.executions) == 0
+        mtf_messages = [t for t in notifier.messages if "[MTF]" in t]
+        assert len(mtf_messages) == 1
+        assert "blocked" in mtf_messages[0].lower()
+
+    def test_no_mtf_filter_backward_compatible(self, tmp_path):
+        """mtf_filter=None -> 기존 동작 유지."""
+        store = JsonRuntimeStore(tmp_path / "runtime.json")
+        notifier = MemoryNotifier()
+        broker = PaperBroker()
+        control = TradingControlService(store, notifier, broker)
+        control.set_mode(TradingMode.auto)
+
+        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=None)
+        state = orchestrator.process_signal(_make_signal())
+
+        assert len(state.executions) == 1
