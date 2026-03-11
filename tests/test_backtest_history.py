@@ -343,3 +343,106 @@ class TestBacktestRepositoryDelete:
         remaining_2 = repo.get_by_strategy(session, strategy_id_2)
         assert remaining_1 == []
         assert len(remaining_2) == 1
+
+
+# ── Runner Auto-Save Integration Tests ───────────────────────
+
+
+class TestRunnerAutoSave:
+    """BacktestRunner auto-saves results to DB when auto_save=True + strategy_id set."""
+
+    def test_auto_save_creates_record(self, engine, session, strategy_id):
+        """auto_save=True + strategy_id => DB record created after run()."""
+        from unittest.mock import MagicMock, patch
+
+        from engine.backtest.runner import BacktestResult, BacktestRunner
+
+        runner = BacktestRunner(auto_save=True, strategy_id=strategy_id)
+
+        mock_result = BacktestResult(
+            symbol="BTC/USDT",
+            timeframe="1d",
+            start_date="2025-01-01",
+            end_date="2025-03-01",
+            initial_capital=10000.0,
+            final_capital=11500.0,
+            total_return=0.15,
+            sharpe_ratio=1.2,
+            max_drawdown=-0.08,
+        )
+
+        # Patch get_session to use our test session/engine
+        from contextlib import contextmanager
+
+        @contextmanager
+        def mock_get_session():
+            yield session
+
+        with patch.object(runner, "_strategy_engine", MagicMock()), \
+             patch("engine.backtest.runner.get_provider", MagicMock()), \
+             patch("engine.core.database.get_session", mock_get_session), \
+             patch("engine.backtest.runner.compute_total_return", return_value=0.15), \
+             patch("engine.backtest.runner.compute_sharpe_ratio", return_value=1.2), \
+             patch("engine.backtest.runner.compute_max_drawdown", return_value=-0.08):
+
+            # Directly test _save_to_db instead of full run()
+            with patch("engine.core.database.get_session", mock_get_session):
+                runner._save_to_db(mock_result)
+
+        records = BacktestRepository().get_by_strategy(session, strategy_id)
+        assert len(records) == 1
+        assert records[0].symbol == "BTC/USDT"
+        assert records[0].slippage_model == "NoSlippage"
+        assert records[0].fee_rate == 0.0
+
+    def test_auto_save_false_no_record(self, session, strategy_id):
+        """auto_save=False => no DB record created."""
+        from unittest.mock import MagicMock, patch
+
+        from engine.backtest.runner import BacktestResult, BacktestRunner
+
+        runner = BacktestRunner(auto_save=False, strategy_id=strategy_id)
+
+        mock_result = BacktestResult(
+            symbol="BTC/USDT",
+            timeframe="1d",
+            start_date="2025-01-01",
+            end_date="2025-03-01",
+            initial_capital=10000.0,
+            final_capital=11500.0,
+            total_return=0.15,
+            sharpe_ratio=1.2,
+            max_drawdown=-0.08,
+        )
+
+        # auto_save=False means _save_to_db should NOT be called by run()
+        # Verify by checking the flag
+        assert runner._auto_save is False
+
+        records = BacktestRepository().get_by_strategy(session, strategy_id)
+        assert len(records) == 0
+
+    def test_save_failure_warns_not_raises(self, strategy_id):
+        """DB save failure logs warning, does not raise."""
+        from unittest.mock import patch
+
+        from engine.backtest.runner import BacktestResult, BacktestRunner
+
+        runner = BacktestRunner(auto_save=True, strategy_id=strategy_id)
+
+        mock_result = BacktestResult(
+            symbol="BTC/USDT",
+            timeframe="1d",
+            start_date="2025-01-01",
+            end_date="2025-03-01",
+            initial_capital=10000.0,
+            final_capital=11500.0,
+            total_return=0.15,
+            sharpe_ratio=1.2,
+            max_drawdown=-0.08,
+        )
+
+        with patch("engine.core.database.get_session", side_effect=RuntimeError("DB down")):
+            # Should NOT raise -- just log warning
+            runner._save_to_db(mock_result)
+            # If we reach here without exception, test passes

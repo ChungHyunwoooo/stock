@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -11,6 +12,8 @@ from engine.backtest.slippage import NoSlippage, SlippageModel
 from engine.data.provider_base import get_provider
 from engine.schema import StrategyDefinition
 from engine.strategy.strategy_evaluator import StrategyEngine
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class TradeRecord:
@@ -64,10 +67,14 @@ class BacktestRunner:
         self,
         slippage_model: SlippageModel | None = None,
         fee_rate: float = 0.0,
+        auto_save: bool = True,
+        strategy_id: int | None = None,
     ) -> None:
         self._strategy_engine = StrategyEngine()
         self._slippage_model: SlippageModel = slippage_model or NoSlippage()
         self._fee_rate = fee_rate
+        self._auto_save = auto_save
+        self._strategy_id = strategy_id
 
     @staticmethod
     def _infer_market(symbol: str, strategy: StrategyDefinition) -> str:
@@ -123,7 +130,7 @@ class BacktestRunner:
         sharpe = compute_sharpe_ratio(equity_curve)
         max_dd = compute_max_drawdown(equity_curve)
 
-        return BacktestResult(
+        result = BacktestResult(
             symbol=symbol,
             timeframe=timeframe,
             start_date=start,
@@ -136,6 +143,36 @@ class BacktestRunner:
             trades=trades,
             equity_curve=equity_curve,
         )
+
+        if self._auto_save and self._strategy_id is not None:
+            self._save_to_db(result)
+
+        return result
+
+    def _save_to_db(self, result: BacktestResult) -> None:
+        """Persist backtest result to DB. Failure is warning-only."""
+        try:
+            from engine.core.database import get_session
+            from engine.core.db_models import BacktestRecord as DBBacktestRecord
+            from engine.core.repository import BacktestRepository
+
+            with get_session() as session:
+                record = DBBacktestRecord(
+                    strategy_id=self._strategy_id,
+                    symbol=result.symbol,
+                    timeframe=result.timeframe,
+                    start_date=result.start_date,
+                    end_date=result.end_date,
+                    total_return=result.total_return,
+                    sharpe_ratio=result.sharpe_ratio,
+                    max_drawdown=result.max_drawdown,
+                    result_json=result.to_result_json(),
+                    slippage_model=type(self._slippage_model).__name__,
+                    fee_rate=self._fee_rate,
+                )
+                BacktestRepository().save(session, record)
+        except Exception as e:
+            logger.warning("backtest result DB save failed: %s", e)
 
     def _simulate(
         self,
