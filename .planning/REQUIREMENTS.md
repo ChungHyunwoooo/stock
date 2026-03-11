@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Backtest Quality
 
-- [ ] **BT-01**: 거래소별 슬리피지+수수료 모델을 백테스트에 적용할 수 있다 (configurable per exchange, VolumeAdjustedSlippage 지원)
+- [x] **BT-01**: 거래소별 슬리피지+수수료 모델을 백테스트에 적용할 수 있다 (configurable per exchange, VolumeAdjustedSlippage 지원)
 - [ ] **BT-02**: Walk-forward OOS 검증으로 전략의 과적합을 방지할 수 있다 (다기간 IS/OOS 분할, IS-OOS 성과 갭 임계치 적용)
 - [ ] **BT-03**: 전략이 2-3개 비상관 심볼에서 일관된 성과를 보이는지 검증할 수 있다 (중앙 Sharpe 기준 통과)
 - [ ] **BT-04**: 백테스트 결과를 DB에 저장하고 전략별/날짜별 이력을 비교할 수 있다
@@ -67,7 +67,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BT-01 | Phase 2 | Pending |
+| BT-01 | Phase 2 | Complete |
 | BT-02 | Phase 2 | Pending |
 | BT-03 | Phase 2 | Pending |
 | BT-04 | Phase 2 | Pending |
