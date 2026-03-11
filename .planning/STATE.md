@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-03-11T09:22:21Z"
-last_activity: 2026-03-11 — Plan 02-04 complete (MultiSymbolValidator + correlation selector + parallel backtest + median Sharpe gate)
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-03-11T09:29:08Z"
+last_activity: 2026-03-11 — Plan 02-05 complete (BacktestRecord schema extension + auto DB save + history comparison)
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 9
   percent: 70
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 2 of 8 (Backtest Quality Gates)
-Plan: 4 of 7 in current phase
+Plan: 5 of 7 in current phase
 Status: In Progress
-Last activity: 2026-03-11 — Plan 02-04 complete (MultiSymbolValidator + correlation selector + parallel backtest + median Sharpe gate)
+Last activity: 2026-03-11 — Plan 02-05 complete (BacktestRecord schema extension + auto DB save + history comparison)
 
-Progress: [███████░░░] 70%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [███████░░░] 70%
 | Phase 01 P02 | 9min | 2 tasks | 7 files |
 | Phase 02 P01 | 5min | 2 tasks | 9 files |
 | Phase 02 P04 | 3min | 2 tasks | 2 files |
+| Phase 02 P05 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [02-04]: Greedy correlation selection: first symbol always included, add if |corr| < max_corr with all selected
 - [02-04]: _validate_sequential for mock-friendly testing without ProcessPoolExecutor pickle issues
 - [02-04]: Failed symbol backtests skipped with warning, not fatal -- partial results accepted
+- [02-05]: Auto-save uses try/except with logger.warning -- DB failure never blocks backtest result
+- [02-05]: Migration uses PRAGMA table_info + ALTER TABLE ADD COLUMN -- no Alembic dependency
+- [02-05]: slippage_model stored as class name (type().__name__) in BacktestRecord
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:22:21Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-03-11T09:29:08Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
