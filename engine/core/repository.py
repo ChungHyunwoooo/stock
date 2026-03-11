@@ -65,6 +65,45 @@ class BacktestRepository:
         stmt = select(BacktestRecord)
         return list(session.scalars(stmt).all())
 
+    def get_history(
+        self, session: Session, strategy_id: int, limit: int = 100
+    ) -> list[BacktestRecord]:
+        """Return time-ordered history for a strategy (newest first)."""
+        stmt = (
+            select(BacktestRecord)
+            .where(BacktestRecord.strategy_id == strategy_id)
+            .order_by(BacktestRecord.created_at.desc())
+            .limit(limit)
+        )
+        return list(session.scalars(stmt).all())
+
+    def compare_strategies(
+        self, session: Session, strategy_ids: list[int]
+    ) -> list[BacktestRecord]:
+        """Return most recent backtest per strategy for cross-comparison."""
+        if not strategy_ids:
+            return []
+        stmt = (
+            select(BacktestRecord)
+            .where(BacktestRecord.strategy_id.in_(strategy_ids))
+            .order_by(BacktestRecord.created_at.desc())
+        )
+        return list(session.scalars(stmt).all())
+
+    def delete(self, session: Session, backtest_id: int) -> None:
+        """Delete a single backtest record."""
+        record = session.get(BacktestRecord, backtest_id)
+        if record is not None:
+            session.delete(record)
+            session.flush()
+
+    def delete_by_strategy(self, session: Session, strategy_id: int) -> None:
+        """Delete all backtest records for a strategy."""
+        records = self.get_by_strategy(session, strategy_id)
+        for record in records:
+            session.delete(record)
+        session.flush()
+
 class KnowledgeRepository:
     def save(self, session: Session, record: KnowledgeRecord) -> KnowledgeRecord:
         session.add(record)

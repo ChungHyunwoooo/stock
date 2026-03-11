@@ -33,6 +33,13 @@ class BacktestRecord(Base):
     result_json: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+    # Phase 2 columns
+    slippage_model: Mapped[str] = mapped_column(String(50), default="none")
+    fee_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    wf_result: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    cpcv_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    multi_symbol_result: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 class KnowledgeRecord(Base):
     __tablename__ = "knowledge"
 
