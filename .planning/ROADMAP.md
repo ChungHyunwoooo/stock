@@ -140,11 +140,11 @@ Plans:
   2. 실시간 포지션, 전략별 PnL 차트, 시스템 상태(스캐너/스케줄러 헬스)를 30초 이내 갱신으로 확인할 수 있다
   3. 대시보드에서 전략 설정(임계치, 필터 on/off)을 변경하면 다음 스캔 사이클부터 반영된다
   4. 자동 탐색 큐의 진행 현황(완료/전체 trial 수, 현재 Sharpe)을 실시간으로 볼 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: Streamlit 대시보드 확장 (포트폴리오 PnL + 전략 성과 차트 + 생명주기 뷰)
-- [ ] 08-02: 탐색 큐 현황 패널 + 설정 변경 UI
+- [ ] 08-01-PLAN.md — DashboardDataService + 멀티페이지 대시보드 (Lifecycle 뷰 + Portfolio PnL + System Health)
+- [ ] 08-02-PLAN.md — IndicatorSweeper sweep_status.json writer + Sweep Progress 패널 + Settings Editor
 
 ## Progress
 
