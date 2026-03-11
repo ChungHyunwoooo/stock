@@ -37,6 +37,14 @@ class TradingOrchestrator:
             self.runtime_store.save(state)
             return state
 
+        if signal.strategy_id in state.paused_strategies:
+            self.notifier.send_text(
+                f"Signal {signal.signal_id} for {signal.symbol} skipped: "
+                f"strategy {signal.strategy_id} is paused (performance degradation)."
+            )
+            self.runtime_store.save(state)
+            return state
+
         if state.mode is TradingMode.alert_only:
             self.notifier.send_signal(signal, mode_label=state.mode.value)
             self.runtime_store.save(state)

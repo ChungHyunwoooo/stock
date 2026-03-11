@@ -108,6 +108,7 @@ class TradingRuntimeState:
     pending_orders: list[PendingOrder] = field(default_factory=list)
     executions: list[ExecutionRecord] = field(default_factory=list)
     positions: list[Position] = field(default_factory=list)
+    paused_strategies: set[str] = field(default_factory=set)
     updated_at: str = field(default_factory=utc_now_iso)
 
     def touch(self) -> None:

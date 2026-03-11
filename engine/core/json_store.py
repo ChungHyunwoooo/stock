@@ -35,7 +35,10 @@ class JsonRuntimeStore:
         self.path.write_text(json.dumps(self._state_to_dict(state), indent=2))
 
     def _state_to_dict(self, state: TradingRuntimeState) -> dict[str, Any]:
-        return asdict(state)
+        data = asdict(state)
+        # set is not JSON-serializable; convert to sorted list
+        data["paused_strategies"] = sorted(state.paused_strategies)
+        return data
 
     def _state_from_dict(self, data: dict[str, Any]) -> TradingRuntimeState:
         pending_orders = [self._pending_from_dict(item) for item in data.get("pending_orders", [])]
@@ -49,6 +52,7 @@ class JsonRuntimeStore:
             pending_orders=pending_orders,
             executions=executions,
             positions=positions,
+            paused_strategies=set(data.get("paused_strategies", [])),
             updated_at=data.get("updated_at", ""),
         )
 
