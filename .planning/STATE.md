@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-03-11T19:05:16.607Z"
-last_activity: 2026-03-11 — Plan 03-02 complete (PromotionGate 6-criteria + 3-channel interface)
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-11T19:10:41.051Z"
+last_activity: 2026-03-11 — Plan 04-02 complete (PortfolioRiskManager 상관관계 게이트 + Orchestrator 연동)
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 100
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 4 of 8 (Portfolio Risk)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-03-11 — Plan 04-01 complete (ATR+Kelly PositionSizer + Risk Parity 자본 배분)
+Plan: 2 of 2 in current phase
+Status: Completed
+Last activity: 2026-03-11 — Plan 04-02 complete (PortfolioRiskManager 상관관계 게이트 + Orchestrator 연동)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 93%
 | Phase 03 P01 | 7min | 2 tasks | 6 files |
 | Phase 03 P02 | 8min | 2 tasks | 10 files |
 | Phase 04 P01 | 6min | 2 tasks | 5 files |
+| Phase 04 P02 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [03-02]: PromotionConfirmView timeout 120s -- longer than TransitionConfirmView for higher-stakes decision
 - [Phase 04]: Kelly cap 제거 -- RiskManager.position_size_factor()가 드로다운 축소 담당
 - [Phase 04]: Risk Parity numpy 직접 구현 -- riskfolio-lib 미사용, 역분산 가중
+- [04-02]: PortfolioRiskManager injected via constructor (None default) for backward compatibility
+- [04-02]: Data < 10 points treated as corr=0 (allow entry) to avoid false blocks on new strategies
+- [04-02]: Strategy override threshold checked per strategy_id in gate
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:05:16.604Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-03-11T19:10:18Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

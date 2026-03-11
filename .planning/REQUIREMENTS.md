@@ -26,7 +26,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **RISK-01**: 실매매 전략의 20거래 롤링 윈도우 성과가 백테스트 기준 대비 저하되면 Discord 알림을 발송한다
 - [x] **RISK-02**: ATR 또는 Kelly fraction 기반으로 변동성에 따른 가변 포지션 사이징이 적용된다
-- [ ] **RISK-03**: 신규 진입 시 기존 활성 전략과의 신호 상관관계가 0.7 초과이면 진입을 차단한다
+- [x] **RISK-03**: 신규 진입 시 기존 활성 전략과의 신호 상관관계가 0.7 초과이면 진입을 차단한다
 
 ### Monitoring & Alerts
 
@@ -78,7 +78,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | LIFE-04 | Phase 1 | Complete |
 | RISK-01 | Phase 5 | Pending |
 | RISK-02 | Phase 4 | Complete |
-| RISK-03 | Phase 4 | Pending |
+| RISK-03 | Phase 4 | Complete |
 | MON-01 | Phase 6 | Pending |
 | MON-02 | Phase 6 | Pending |
 | MON-03 | Phase 8 | Pending |
