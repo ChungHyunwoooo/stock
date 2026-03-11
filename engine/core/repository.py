@@ -145,10 +145,20 @@ class TradeRepository:
         stmt = select(TradeRecord).where(TradeRecord.trade_id == trade_id)
         return session.scalars(stmt).first()
 
-    def list_open(self, session: Session, symbol: str | None = None) -> list[TradeRecord]:
+    def list_open(
+        self,
+        session: Session,
+        symbol: str | None = None,
+        strategy_name: str | None = None,
+        broker: str | None = None,
+    ) -> list[TradeRecord]:
         stmt = select(TradeRecord).where(TradeRecord.status == "open")
         if symbol:
             stmt = stmt.where(TradeRecord.symbol == symbol)
+        if strategy_name:
+            stmt = stmt.where(TradeRecord.strategy_name == strategy_name)
+        if broker:
+            stmt = stmt.where(TradeRecord.broker == broker)
         return list(session.scalars(stmt).all())
 
     def list_closed(

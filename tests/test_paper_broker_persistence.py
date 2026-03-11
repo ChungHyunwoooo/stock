@@ -280,9 +280,21 @@ class TestPaperTradingConfig:
 @pytest.fixture()
 def paper_db(tmp_path: Path):
     """File-based SQLite for PaperBroker integration tests."""
+    import engine.core.database as _db
+
+    # Reset global engine singleton for test isolation
+    if _db._engine is not None:
+        _db._engine.dispose()
+        _db._engine = None
+
     db_path = tmp_path / "paper_test.db"
     db_url = f"sqlite:///{db_path}"
-    return db_url
+    yield db_url
+
+    # Cleanup after test
+    if _db._engine is not None:
+        _db._engine.dispose()
+        _db._engine = None
 
 
 class TestPaperBrokerInit:
