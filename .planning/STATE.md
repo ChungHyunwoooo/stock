@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-11T19:13:59.387Z"
-last_activity: 2026-03-11 — Plan 04-02 complete (PortfolioRiskManager 상관관계 게이트 + Orchestrator 연동)
+status: in-progress
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-11T19:38:00Z"
+last_activity: 2026-03-11 — Plan 05-01 complete (StrategyPerformanceMonitor 롤링 Sharpe/승률 + per-strategy pause)
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 21
+  completed_plans: 15
+  percent: 71
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** 수익을 주는 자동화 봇 — 전략 발굴부터 실매매까지 사람 개입 없이 돌아가되, 성과 저하 시 즉시 알림으로 제어권 유지
-**Current focus:** Phase 4 — Portfolio Risk
+**Current focus:** Phase 5 — Performance Monitoring
 
 ## Current Position
 
-Phase: 4 of 8 (Portfolio Risk)
-Plan: 2 of 2 in current phase
-Status: Completed
-Last activity: 2026-03-11 — Plan 04-02 complete (PortfolioRiskManager 상관관계 게이트 + Orchestrator 연동)
+Phase: 5 of 8 (Performance Monitoring)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-03-11 — Plan 05-01 complete (StrategyPerformanceMonitor 롤링 Sharpe/승률 + per-strategy pause)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 03 P02 | 8min | 2 tasks | 10 files |
 | Phase 04 P01 | 6min | 2 tasks | 5 files |
 | Phase 04 P02 | 4min | 2 tasks | 3 files |
+| Phase 05 P01 | 2min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [04-02]: PortfolioRiskManager injected via constructor (None default) for backward compatibility
 - [04-02]: Data < 10 points treated as corr=0 (allow entry) to avoid false blocks on new strategies
 - [04-02]: Strategy override threshold checked per strategy_id in gate
+- [05-01]: Pure Python Sharpe (mean/std) -- no numpy dependency for monitor
+- [05-01]: set->sorted list->set for paused_strategies JSON serialization
+- [05-01]: Daemon thread with per-strategy try/except -- one failure never blocks others
 
 ### Pending Todos
 
@@ -110,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:10:18Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-11T19:38:00Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
