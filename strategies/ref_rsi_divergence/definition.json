@@ -1,0 +1,56 @@
+{
+  "name": "RSI Divergence",
+  "version": "1.0",
+  "status": "draft",
+  "description": "RSI divergence 기반 추세 반전 전략 (Cardwell 이론). Phase 1 워크플로우 증명용 레퍼런스.",
+  "markets": ["crypto_futures"],
+  "direction": "both",
+  "timeframes": ["1h"],
+  "indicators": [
+    {
+      "name": "RSI",
+      "params": {"timeperiod": 14},
+      "output": "rsi_14"
+    },
+    {
+      "name": "ATR",
+      "params": {"timeperiod": 14},
+      "output": "atr_14"
+    }
+  ],
+  "entry": {
+    "logic": "and",
+    "conditions": [
+      {
+        "left": "rsi_14",
+        "op": "crosses_below",
+        "right": 30
+      }
+    ]
+  },
+  "exit": {
+    "logic": "and",
+    "conditions": [
+      {
+        "left": "rsi_14",
+        "op": "crosses_above",
+        "right": 50
+      }
+    ]
+  },
+  "risk": {
+    "stop_loss_pct": null,
+    "take_profit_pct": null,
+    "risk_per_trade_pct": 0.02,
+    "trailing_stop_pct": null
+  },
+  "metadata": {
+    "source_references": [
+      "Constance Brown, Technical Analysis for the Trading Professional, 1999",
+      "Andrew Cardwell RSI Divergence Theory"
+    ],
+    "tags": ["divergence", "rsi", "mean-reversion", "reference"],
+    "notes": "Phase 1 워크플로우 증명용. entry/exit는 simplified -- divergence 패턴 정밀 조건은 Phase 2 확장 예정."
+  },
+  "regime": null
+}

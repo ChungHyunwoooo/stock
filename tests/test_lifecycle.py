@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
-from engine.schema import StrategyStatus
+from engine.schema import StrategyDefinition, StrategyStatus
 from engine.strategy.lifecycle_manager import (
     ALLOWED_TRANSITIONS,
     InvalidTransitionError,
@@ -313,3 +314,32 @@ def test_deprecated_strategies_ignored(manager):
 
     with pytest.raises(InvalidTransitionError):
         manager.transition("test_deprecated", "archived")
+
+
+# ---------------------------------------------------------------------------
+# Reference strategy validation
+# ---------------------------------------------------------------------------
+
+def test_reference_strategy_valid():
+    """ref_rsi_divergence/definition.json validates against StrategyDefinition schema."""
+    definition_path = Path("strategies/ref_rsi_divergence/definition.json")
+    assert definition_path.exists(), f"{definition_path} not found"
+
+    data = json.loads(definition_path.read_text(encoding="utf-8"))
+    strategy = StrategyDefinition.model_validate(data)
+
+    assert strategy.name == "RSI Divergence"
+    assert strategy.version == "1.0"
+    assert strategy.status.value == "draft"
+    assert strategy.direction.value == "both"
+    assert len(strategy.indicators) == 2
+    assert strategy.indicators[0].name == "RSI"
+    assert strategy.indicators[1].name == "ATR"
+
+    # research.md must exist and have required sections
+    research_path = Path("strategies/ref_rsi_divergence/research.md")
+    assert research_path.exists(), f"{research_path} not found"
+    content = research_path.read_text(encoding="utf-8")
+    assert "## 출처" in content
+    assert "## 전략 로직 요약" in content
+    assert "## 백테스트 결과 요약" in content

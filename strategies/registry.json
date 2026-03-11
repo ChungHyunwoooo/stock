@@ -4,72 +4,130 @@
       "id": "dante_staircase",
       "name": "세력계단",
       "status": "active",
-      "direction": ["LONG"],
-      "timeframe": ["1h", "4h"],
-      "regime": ["BULL"],
+      "direction": [
+        "LONG"
+      ],
+      "timeframe": [
+        "1h",
+        "4h"
+      ],
+      "regime": [
+        "BULL"
+      ],
       "definition": "strategies/dante_staircase/definition.json"
     },
     {
       "id": "dante_watermelon",
       "name": "수박지표",
       "status": "active",
-      "direction": ["LONG"],
-      "timeframe": ["D1"],
-      "regime": ["BULL"],
+      "direction": [
+        "LONG"
+      ],
+      "timeframe": [
+        "D1"
+      ],
+      "regime": [
+        "BULL"
+      ],
       "definition": "strategies/dante_watermelon/definition.json"
     },
     {
       "id": "sar_reversal",
       "name": "SAR 반전",
       "status": "active",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "definition": "strategies/sar_reversal/definition.json"
     },
     {
       "id": "sar_adx_trend",
       "name": "SAR+ADX 추세",
       "status": "active",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["BULL", "BEAR"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "BULL",
+        "BEAR"
+      ],
       "definition": "strategies/sar_adx_trend/definition.json"
     },
     {
       "id": "sar_adx_cross",
       "name": "SAR+ADX 크로스",
       "status": "active",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["BULL", "BEAR"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "BULL",
+        "BEAR"
+      ],
       "definition": "strategies/sar_adx_cross/definition.json"
     },
     {
       "id": "bb_mean_reversion",
       "name": "BB 평균회귀",
       "status": "active",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["RANGE"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "RANGE"
+      ],
       "definition": "strategies/bb_mean_reversion/definition.json"
     },
     {
       "id": "rsi_macd_momentum",
       "name": "RSI+MACD 모멘텀",
       "status": "active",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["BULL", "BEAR"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "BULL",
+        "BEAR"
+      ],
       "definition": "strategies/rsi_macd_momentum/definition.json"
     },
     {
       "id": "bb_squeeze",
       "name": "BB Squeeze",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "deprecated_reason": "전 구간 적자, WR 34%",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/bb_squeeze/definition.json"
@@ -78,9 +136,15 @@
       "id": "bb_bounce",
       "name": "BB Bounce",
       "status": "deprecated",
-      "direction": ["LONG"],
-      "timeframe": ["1h"],
-      "regime": ["RANGE"],
+      "direction": [
+        "LONG"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "RANGE"
+      ],
       "deprecated_reason": "SL 버그 수정 후 전멸",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/bb_bounce/definition.json"
@@ -89,9 +153,16 @@
       "id": "grid_trading",
       "name": "Grid Trading",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["ALL"],
-      "regime": ["RANGE"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "ALL"
+      ],
+      "regime": [
+        "RANGE"
+      ],
       "deprecated_reason": "수수료에 잠식",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/grid_trading/definition.json"
@@ -100,9 +171,16 @@
       "id": "donchian_breakout",
       "name": "Donchian Breakout",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "deprecated_reason": "적자",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/donchian_breakout/definition.json"
@@ -111,9 +189,16 @@
       "id": "rsi_sr",
       "name": "RSI + S/R",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "deprecated_reason": "적자",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/rsi_sr/definition.json"
@@ -122,9 +207,16 @@
       "id": "keltner_mr",
       "name": "Keltner MR",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["RANGE"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "RANGE"
+      ],
       "deprecated_reason": "적자",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/keltner_mr/definition.json"
@@ -133,9 +225,17 @@
       "id": "bull_bear_flag",
       "name": "Bull/Bear Flag",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["BULL", "BEAR"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "BULL",
+        "BEAR"
+      ],
       "deprecated_reason": "Bull 전 구간 적자, Bear는 DESC_TRIANGLE 대비 열등",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/bull_bear_flag/definition.json"
@@ -144,9 +244,15 @@
       "id": "ema_stack_short",
       "name": "EMA Stack SHORT",
       "status": "deprecated",
-      "direction": ["SHORT"],
-      "timeframe": ["1h"],
-      "regime": ["BEAR"],
+      "direction": [
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "BEAR"
+      ],
       "deprecated_reason": "BEAR에서 적자",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/ema_stack_short/definition.json"
@@ -155,9 +261,16 @@
       "id": "upbit_scanner",
       "name": "Upbit Scanner (10종)",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["ALL"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "ALL"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "deprecated_reason": "pattern_alert로 교체",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/upbit_scanner/definition.json"
@@ -166,12 +279,43 @@
       "id": "swing_scanner",
       "name": "Swing Scanner (6종)",
       "status": "deprecated",
-      "direction": ["LONG", "SHORT"],
-      "timeframe": ["ALL"],
-      "regime": ["ALL"],
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "ALL"
+      ],
+      "regime": [
+        "ALL"
+      ],
       "deprecated_reason": "pattern_alert로 교체",
       "deprecated_date": "2026-03-09",
       "definition": "strategies/swing_scanner/definition.json"
+    },
+    {
+      "id": "ref_rsi_divergence",
+      "name": "RSI Divergence",
+      "direction": [
+        "LONG",
+        "SHORT"
+      ],
+      "timeframe": [
+        "1h"
+      ],
+      "regime": [
+        "ALL"
+      ],
+      "definition": "strategies/ref_rsi_divergence/definition.json",
+      "status": "draft",
+      "status_history": [
+        {
+          "from": null,
+          "to": "draft",
+          "date": "2026-03-11T03:09:15.385408+00:00",
+          "reason": "initial registration"
+        }
+      ]
     }
   ]
 }
