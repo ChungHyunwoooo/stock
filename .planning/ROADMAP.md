@@ -110,12 +110,12 @@ Plans:
   2. Discord /status 커맨드 실행 시 현재 포지션, 일일 PnL, 전략별 상태가 5초 이내에 응답된다
   3. MTF 필터를 활성화하면 상위 타임프레임 방향과 반대되는 단기 진입 신호가 차단된다
   4. MTF 필터를 비활성화하면 단기 신호가 상위 타임프레임 무관하게 통과된다 (설정으로 제어 가능)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Discord 알림 통합 (체결/상태변화/시스템이상/백테스트 결과 이벤트)
-- [ ] 06-02: Discord /status 커맨드 (포지션 + 일일 PnL + 전략 상태 즉시 조회)
-- [ ] 06-03: MTF confirmation gate 활성화 (상위 타임프레임 방향 필터)
+- [ ] 06-01-PLAN.md — Discord 알림 통합 (체결/상태변화/시스템이상/백테스트 결과 이벤트) (MON-01)
+- [ ] 06-02-PLAN.md — Discord /status 커맨드 (포지션 + 일일 PnL + 전략 상태 즉시 조회) (MON-02)
+- [ ] 06-03-PLAN.md — MTF confirmation gate (상위 타임프레임 방향 필터) (MON-04)
 
 ### Phase 7: Auto-Discovery
 **Goal**: Optuna 기반 자동 탐색이 후보 전략을 draft 상태로 발굴하고, ccxt를 통해 Binance/Upbit 외 거래소 데이터와 주문 실행을 지원한다
