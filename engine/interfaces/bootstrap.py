@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from engine.application.trading.trading_control import TradingControlService
 from engine.application.trading.orchestrator import TradingOrchestrator
+from engine.notifications.event_notifier import EventNotifier
 from engine.strategy.plugin_runtime import broker_plugins, notifier_plugins, runtime_store_plugins
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class TradingRuntime:
     position_sizer: PositionSizer
     portfolio_risk: PortfolioRiskManager
     performance_monitor: StrategyPerformanceMonitor
+    event_notifier: EventNotifier
 
 
 def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> TradingRuntime:
@@ -67,6 +69,9 @@ def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> Trading
     )
     broker = broker_plugins.create(runtime_config.broker_plugin)
 
+    # -- Phase 10: EventNotifier --
+    event_notifier = EventNotifier(notifier)
+
     # -- Phase 4/5/9: Risk + Sizing components --
     risk_manager = RiskManager()
     position_sizer = PositionSizer(
@@ -83,32 +88,45 @@ def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> Trading
         notifier=notifier,
     )
 
-    # -- Orchestrator with position_sizer + portfolio_risk injected --
+    # -- Orchestrator with position_sizer + portfolio_risk + event_notifier injected --
     orchestrator = TradingOrchestrator(
         store, notifier, broker,
         position_sizer=position_sizer,
         portfolio_risk=portfolio_risk,
+        event_notifier=event_notifier,
     )
     control = TradingControlService(store, notifier, broker)
 
-    # -- Phase 5/9: Performance monitor + daemon --
-    trade_repo = TradeRepository()
-    backtest_repo = BacktestRepository()
-    lifecycle = LifecycleManager()
-    perf_config = PerformanceConfig(
-        check_interval_seconds=runtime_config.monitor_interval,
-        warning_threshold=runtime_config.monitor_warning_threshold,
-        critical_sharpe=runtime_config.monitor_critical_sharpe,
-    )
-    performance_monitor = StrategyPerformanceMonitor(
-        trade_repo=trade_repo,
-        backtest_repo=backtest_repo,
-        lifecycle=lifecycle,
-        runtime_store=store,
-        notifier=notifier,
-        config=perf_config,
-    )
-    performance_monitor.run_daemon(session_factory=get_session)
+    try:
+        # -- Phase 5/9: Performance monitor + daemon --
+        trade_repo = TradeRepository()
+        backtest_repo = BacktestRepository()
+        lifecycle = LifecycleManager()
+
+        # -- Phase 10: Lifecycle transition -> EventNotifier callback --
+        lifecycle.add_transition_listener(
+            lambda sid, fr, to: event_notifier.notify_lifecycle_transition(sid, fr, to)
+        )
+
+        perf_config = PerformanceConfig(
+            check_interval_seconds=runtime_config.monitor_interval,
+            warning_threshold=runtime_config.monitor_warning_threshold,
+            critical_sharpe=runtime_config.monitor_critical_sharpe,
+        )
+        performance_monitor = StrategyPerformanceMonitor(
+            trade_repo=trade_repo,
+            backtest_repo=backtest_repo,
+            lifecycle=lifecycle,
+            runtime_store=store,
+            notifier=notifier,
+            config=perf_config,
+        )
+        performance_monitor.run_daemon(session_factory=get_session)
+    except Exception as e:
+        event_notifier.notify_system_error(
+            component="bootstrap", error=str(e), severity="CRITICAL"
+        )
+        raise
 
     return TradingRuntime(
         orchestrator=orchestrator,
@@ -117,4 +135,5 @@ def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> Trading
         position_sizer=position_sizer,
         portfolio_risk=portfolio_risk,
         performance_monitor=performance_monitor,
+        event_notifier=event_notifier,
     )

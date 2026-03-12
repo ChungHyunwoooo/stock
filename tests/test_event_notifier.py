@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from engine.core.models import BrokerKind, ExecutionRecord, SignalAction, TradeSide
 from engine.notifications.discord_webhook import MemoryNotifier
@@ -169,3 +170,98 @@ class TestLifecycleCallbackIntegration:
         entry = lm.transition("test_strat", "testing")
 
         assert entry["status"] == "testing"
+
+
+# --- Phase 10 Task 1 tests ---
+
+
+class TestBootstrapWiring:
+    """build_trading_runtime() creates EventNotifier and injects into orchestrator."""
+
+    @patch("engine.strategy.performance_monitor.StrategyPerformanceMonitor.run_daemon")
+    def test_orchestrator_has_event_notifier(self, mock_daemon: MagicMock) -> None:
+        from engine.interfaces.bootstrap import build_trading_runtime, TradingRuntimeConfig
+
+        runtime = build_trading_runtime(TradingRuntimeConfig(
+            notifier_plugin="memory",
+            broker_plugin="paper",
+        ))
+
+        assert runtime.orchestrator.event_notifier is not None
+        assert isinstance(runtime.event_notifier, EventNotifier)
+
+
+class TestBacktestRunnerNotification:
+    """BacktestRunner(event_notifier=en).run() sends [BACKTEST] on completion."""
+
+    def test_run_sends_backtest_notification(self) -> None:
+        import pandas as pd
+        from engine.backtest.runner import BacktestRunner
+        from engine.schema import (
+            Condition, ConditionGroup, ConditionOp, Direction,
+            IndicatorDef, MarketType, RiskParams, StrategyDefinition, StrategyStatus,
+        )
+
+        en, mem = _make_notifier()
+        runner = BacktestRunner(auto_save=False, event_notifier=en)
+
+        strategy = StrategyDefinition(
+            name="test_notify",
+            version="1.0",
+            status=StrategyStatus.draft,
+            markets=[MarketType.crypto_spot],
+            direction=Direction.long,
+            timeframes=["1d"],
+            indicators=[IndicatorDef(name="rsi", params={"period": 14}, output="rsi_14")],
+            entry=ConditionGroup(logic="and", conditions=[Condition(left="rsi_14", op=ConditionOp.lt, right=30)]),
+            exit=ConditionGroup(logic="and", conditions=[Condition(left="rsi_14", op=ConditionOp.gt, right=70)]),
+            risk=RiskParams(),
+        )
+
+        # Mock data provider to return simple data
+        dates = pd.date_range("2024-01-01", periods=5, freq="D")
+        df = pd.DataFrame(
+            {"open": [100]*5, "high": [105]*5, "low": [95]*5, "close": [100]*5, "volume": [1000]*5},
+            index=dates,
+        )
+
+        with patch("engine.backtest.runner.get_provider") as mock_provider:
+            mock_provider.return_value.fetch_ohlcv.return_value = df
+            runner.run(strategy, symbol="BTC/USDT", start="2024-01-01", end="2024-01-05")
+
+        assert len(mem.messages) == 1
+        assert "[BACKTEST]" in mem.messages[0]
+        assert "test_notify" in mem.messages[0]
+
+
+class TestBacktestRunnerBackwardCompat:
+    """BacktestRunner() no-arg construction still works."""
+
+    def test_no_arg_construction(self) -> None:
+        from engine.backtest.runner import BacktestRunner
+
+        runner = BacktestRunner()
+        assert runner._event_notifier is None
+
+
+class TestBacktestHistoryRegistered:
+    """BacktestHistoryPlugin is in DEFAULT_COMMAND_PLUGINS."""
+
+    def test_plugin_registered(self) -> None:
+        from engine.interfaces.discord.commands import DEFAULT_COMMAND_PLUGINS
+        from engine.interfaces.discord.commands.backtest_history import BacktestHistoryPlugin
+
+        assert any(isinstance(p, BacktestHistoryPlugin) for p in DEFAULT_COMMAND_PLUGINS)
+
+
+class TestSystemErrorNotification:
+    """notify_system_error sends [CRITICAL] or [WARNING] message."""
+
+    def test_system_error_message(self) -> None:
+        en, mem = _make_notifier()
+        en.notify_system_error(component="bootstrap", error="test error", severity="CRITICAL")
+
+        assert len(mem.messages) == 1
+        assert "[CRITICAL]" in mem.messages[0]
+        assert "bootstrap" in mem.messages[0]
+        assert "test error" in mem.messages[0]

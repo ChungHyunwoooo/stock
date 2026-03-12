@@ -7,11 +7,16 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
+from typing import TYPE_CHECKING
+
 from engine.backtest.metrics import compute_max_drawdown, compute_sharpe_ratio, compute_total_return
 from engine.backtest.slippage import NoSlippage, SlippageModel
 from engine.data.provider_base import get_provider
 from engine.schema import StrategyDefinition
 from engine.strategy.strategy_evaluator import StrategyEngine
+
+if TYPE_CHECKING:
+    from engine.notifications.event_notifier import EventNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -69,12 +74,14 @@ class BacktestRunner:
         fee_rate: float = 0.0,
         auto_save: bool = True,
         strategy_id: int | None = None,
+        event_notifier: EventNotifier | None = None,
     ) -> None:
         self._strategy_engine = StrategyEngine()
         self._slippage_model: SlippageModel = slippage_model or NoSlippage()
         self._fee_rate = fee_rate
         self._auto_save = auto_save
         self._strategy_id = strategy_id
+        self._event_notifier = event_notifier
 
     @staticmethod
     def _infer_market(symbol: str, strategy: StrategyDefinition) -> str:
@@ -146,6 +153,18 @@ class BacktestRunner:
 
         if self._auto_save and self._strategy_id is not None:
             self._save_to_db(result)
+
+        if self._event_notifier is not None:
+            try:
+                self._event_notifier.notify_backtest_complete(
+                    strategy_id=strategy.name,
+                    symbol=result.symbol,
+                    sharpe=result.sharpe_ratio,
+                    total_return=result.total_return,
+                    max_dd=result.max_drawdown,
+                )
+            except Exception as e:
+                logger.warning("backtest completion notification failed: %s", e)
 
         return result
 
