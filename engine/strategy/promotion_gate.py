@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from engine.core.repository import PaperRepository, TradeRepository
+from engine.core.repository import BacktestRepository, PaperRepository, TradeRepository
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +87,15 @@ def resolve_promotion_config(
 class PromotionGate:
     """Evaluates whether a paper strategy meets promotion criteria."""
 
-    def __init__(self, paper_repo: PaperRepository, trade_repo: TradeRepository) -> None:
+    def __init__(
+        self,
+        paper_repo: PaperRepository,
+        trade_repo: TradeRepository,
+        backtest_repo: BacktestRepository | None = None,
+    ) -> None:
         self.paper_repo = paper_repo
         self.trade_repo = trade_repo
+        self.backtest_repo = backtest_repo
 
     def evaluate(
         self, strategy_id: str, config: PromotionConfig, session: Session,
@@ -159,6 +165,18 @@ class PromotionGate:
             passed=(sharpe is not None and sharpe >= config.min_sharpe) if sharpe is not None else True,
         )
 
+        # 4b. Backtest baseline Sharpe comparison (optional)
+        # Paper Sharpe uses sqrt(365), backtest uses sqrt(252) -- approximate comparison by design.
+        if self.backtest_repo is not None and sharpe is not None:
+            baseline = self._get_backtest_sharpe(session, strategy_id)
+            if baseline is not None:
+                checks["backtest_sharpe"] = PromotionCheck(
+                    name="backtest baseline Sharpe",
+                    required=round(baseline, 4),
+                    actual=round(sharpe, 4),
+                    passed=sharpe >= baseline,
+                )
+
         # 5. Max drawdown (peak-to-trough from equity curve)
         if len(snapshots) >= 2:
             equities = [s.equity for s in snapshots]
@@ -202,6 +220,13 @@ class PromotionGate:
             summary=summary,
             estimated_promotion=estimated,
         )
+
+    def _get_backtest_sharpe(self, session: Session, strategy_id: str) -> float | None:
+        """Return latest backtest Sharpe for strategy, or None if no records."""
+        records = self.backtest_repo.get_history(session, strategy_id, limit=1)
+        if not records:
+            return None
+        return records[0].sharpe_ratio
 
     def _estimate_promotion(
         self,

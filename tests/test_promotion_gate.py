@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from engine.core.db_models import Base, PaperPnlSnapshot, TradeRecord
-from engine.core.repository import PaperRepository, TradeRepository
+from engine.core.repository import BacktestRepository, PaperRepository, TradeRepository
 from engine.schema import StrategyDefinition, StrategyStatus
 from engine.strategy.promotion_gate import (
     PromotionCheck,
@@ -257,6 +257,62 @@ class TestPromotionGateEvaluate:
         result = gate.evaluate("strat_h", config, db_session)
         assert result.passed is False
         assert result.estimated_promotion is not None
+
+    def test_backtest_sharpe_blocks_when_paper_below_baseline(self, db_session, paper_repo, trade_repo):
+        """Paper Sharpe < backtest baseline -> backtest_sharpe check fails, result fails."""
+        _seed_snapshots(db_session, "strat_bt1", days=10)
+        _seed_trades(db_session, "strat_bt1", count=15, win_ratio=0.6)
+
+        mock_bt_repo = MagicMock(spec=BacktestRepository)
+        mock_bt_repo.get_history.return_value = [MagicMock(sharpe_ratio=9999.0)]  # very high baseline
+
+        gate = PromotionGate(paper_repo, trade_repo, backtest_repo=mock_bt_repo)
+        config = PromotionConfig(min_days=1, min_trades=1, min_sharpe=-999, min_win_rate=0.0, max_drawdown=-0.99, min_cumulative_pnl=-99999)
+        result = gate.evaluate("strat_bt1", config, db_session)
+
+        assert "backtest_sharpe" in result.checks
+        assert result.checks["backtest_sharpe"].passed is False
+        assert result.passed is False
+
+    def test_backtest_sharpe_passes_when_paper_above_baseline(self, db_session, paper_repo, trade_repo):
+        """Paper Sharpe > backtest baseline -> backtest_sharpe check passes."""
+        _seed_snapshots(db_session, "strat_bt2", days=10)
+        _seed_trades(db_session, "strat_bt2", count=15, win_ratio=0.6)
+
+        mock_bt_repo = MagicMock(spec=BacktestRepository)
+        mock_bt_repo.get_history.return_value = [MagicMock(sharpe_ratio=0.001)]  # very low baseline
+
+        gate = PromotionGate(paper_repo, trade_repo, backtest_repo=mock_bt_repo)
+        config = PromotionConfig(min_days=1, min_trades=1, min_sharpe=-999, min_win_rate=0.0, max_drawdown=-0.99, min_cumulative_pnl=-99999)
+        result = gate.evaluate("strat_bt2", config, db_session)
+
+        assert "backtest_sharpe" in result.checks
+        assert result.checks["backtest_sharpe"].passed is True
+
+    def test_no_backtest_record_skips_check(self, db_session, paper_repo, trade_repo):
+        """backtest_repo.get_history returns [] -> no backtest_sharpe check."""
+        _seed_snapshots(db_session, "strat_bt3", days=10)
+        _seed_trades(db_session, "strat_bt3", count=15, win_ratio=0.6)
+
+        mock_bt_repo = MagicMock(spec=BacktestRepository)
+        mock_bt_repo.get_history.return_value = []
+
+        gate = PromotionGate(paper_repo, trade_repo, backtest_repo=mock_bt_repo)
+        config = PromotionConfig(min_days=1, min_trades=1, min_sharpe=-999, min_win_rate=0.0, max_drawdown=-0.99, min_cumulative_pnl=-99999)
+        result = gate.evaluate("strat_bt3", config, db_session)
+
+        assert "backtest_sharpe" not in result.checks
+
+    def test_no_backtest_repo_skips_check(self, db_session, paper_repo, trade_repo):
+        """PromotionGate without backtest_repo -> no backtest_sharpe check at all."""
+        _seed_snapshots(db_session, "strat_bt4", days=10)
+        _seed_trades(db_session, "strat_bt4", count=15, win_ratio=0.6)
+
+        gate = PromotionGate(paper_repo, trade_repo)  # no backtest_repo
+        config = PromotionConfig(min_days=1, min_trades=1, min_sharpe=-999, min_win_rate=0.0, max_drawdown=-0.99, min_cumulative_pnl=-99999)
+        result = gate.evaluate("strat_bt4", config, db_session)
+
+        assert "backtest_sharpe" not in result.checks
 
 
 # ---------------------------------------------------------------------------
