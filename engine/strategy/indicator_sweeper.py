@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import optuna
@@ -78,12 +80,59 @@ class IndicatorSweeper:
         candidates = self._register_candidates(study)
         self._notify_results(candidates)
 
+        # 최종 상태 기록 (candidates_found 반영)
+        completed_trials = [
+            t for t in study.trials
+            if t.state == optuna.trial.TrialState.COMPLETE and t.value is not None
+        ]
+        best_sharpe = max((t.value for t in completed_trials), default=0.0)
+        self._write_sweep_status(
+            completed=self._config.n_trials,
+            total=self._config.n_trials,
+            best_sharpe=best_sharpe,
+            candidates_found=len(candidates),
+        )
+
         logger.info(
             "Sweep 완료: %d trials, %d 후보 등록",
             self._config.n_trials,
             len(candidates),
         )
         return candidates
+
+    def _write_sweep_status(
+        self,
+        completed: int,
+        total: int,
+        best_sharpe: float,
+        candidates_found: int,
+        state_dir: Path | None = None,
+    ) -> None:
+        """state/sweep_status.json에 진행 상태를 기록한다.
+
+        Parameters
+        ----------
+        state_dir : Path | None
+            상태 파일 디렉토리. None이면 ``state/`` 사용.
+        """
+        target_dir = state_dir or Path("state")
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        status = {
+            "completed": completed,
+            "total": total,
+            "best_sharpe": best_sharpe,
+            "candidates_found": candidates_found,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        status_path = target_dir / "sweep_status.json"
+        tmp_path = status_path.with_suffix(".tmp")
+        tmp_path.write_text(
+            json.dumps(status, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(str(tmp_path), str(status_path))
 
     def _objective(self, trial: optuna.Trial) -> float:
         """Optuna objective 함수.
@@ -124,9 +173,26 @@ class IndicatorSweeper:
             timeframe=self._config.timeframe,
         )
         if not ms_result.passed:
-            return float("-inf")
+            sharpe = float("-inf")
+        else:
+            sharpe = ms_result.median_sharpe
 
-        return ms_result.median_sharpe
+        # trial 완료 후 sweep 상태 기록
+        completed = trial.number + 1  # 0-indexed
+        # 현재까지 유효 sharpe 최대값
+        best_so_far = max(sharpe, 0.0) if sharpe != float("-inf") else 0.0
+        if hasattr(self, "_best_sharpe"):
+            self._best_sharpe = max(self._best_sharpe, best_so_far)
+        else:
+            self._best_sharpe = best_so_far
+        self._write_sweep_status(
+            completed=completed,
+            total=self._config.n_trials,
+            best_sharpe=self._best_sharpe,
+            candidates_found=0,  # run() 완료 후 최종 갱신
+        )
+
+        return sharpe
 
     def _build_strategy(self, trial: optuna.Trial) -> StrategyDefinition:
         """trial 파라미터로 StrategyDefinition을 생성한다."""

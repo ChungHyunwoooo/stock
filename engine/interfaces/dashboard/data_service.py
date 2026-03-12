@@ -6,7 +6,9 @@ No FastAPI -- direct repo imports (anti-pattern compliance).
 
 from __future__ import annotations
 
+import json
 from collections import Counter
+from pathlib import Path
 
 from engine.core.json_store import JsonRuntimeStore
 from engine.core.repository import TradeRepository
@@ -58,6 +60,27 @@ class DashboardDataService:
             "paused_strategies": state.paused_strategies,
             "updated_at": state.updated_at,
         }
+
+    # -- Sweep Status --------------------------------------------------------
+
+    def get_sweep_status(self, state_dir: Path | None = None) -> dict | None:
+        """Return sweep progress from state/sweep_status.json.
+
+        Parameters
+        ----------
+        state_dir : Path | None
+            Override for state directory (for testing). Defaults to ``state/``.
+
+        Returns ``None`` if file missing or corrupted.
+        """
+        target_dir = state_dir or Path("state")
+        status_path = target_dir / "sweep_status.json"
+        if not status_path.exists():
+            return None
+        try:
+            return json.loads(status_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
 
     # -- Positions / Trades --------------------------------------------------
 
