@@ -38,10 +38,10 @@ created: 2026-03-12
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 11-01-01 | 01 | 1 | LIFE-03 | unit | `.venv/bin/python -m pytest tests/trading/test_promotion_gate.py -x` | ❌ W0 | ⬜ pending |
-| 11-01-02 | 01 | 1 | LIFE-03 | unit | `.venv/bin/python -m pytest tests/trading/test_promotion_gate.py -x` | ❌ W0 | ⬜ pending |
-| 11-02-01 | 02 | 1 | BT-05 | unit | `.venv/bin/python -m pytest tests/trading/test_cpcv_sweep.py -x` | ❌ W0 | ⬜ pending |
-| 11-02-02 | 02 | 1 | BT-05 | unit | `.venv/bin/python -m pytest tests/trading/test_cpcv_sweep.py -x` | ❌ W0 | ⬜ pending |
+| 11-01-01 | 01 | 1 | LIFE-03 | unit | `.venv/bin/python -m pytest tests/test_promotion_gate.py -x` | ❌ W0 | ⬜ pending |
+| 11-01-02 | 01 | 1 | LIFE-03 | unit | `.venv/bin/python -m pytest tests/test_promotion_gate.py -x` | ❌ W0 | ⬜ pending |
+| 11-01-03 | 01 | 1 | BT-05 | unit | `.venv/bin/python -m pytest tests/test_indicator_sweeper.py -x` | ❌ W0 | ⬜ pending |
+| 11-01-04 | 01 | 1 | BT-05 | unit | `.venv/bin/python -m pytest tests/test_indicator_sweeper.py -x` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,8 +49,8 @@ created: 2026-03-12
 
 ## Wave 0 Requirements
 
-- [ ] `tests/trading/test_promotion_gate.py` — stubs for LIFE-03 (backtest baseline comparison)
-- [ ] `tests/trading/test_cpcv_sweep.py` — stubs for BT-05 (CPCV mode in sweep)
+- [ ] `tests/test_promotion_gate.py` — stubs for LIFE-03 (backtest baseline comparison)
+- [ ] `tests/test_indicator_sweeper.py` — stubs for BT-05 (CPCV mode in sweep)
 
 *Existing test infrastructure and fixtures cover all needs.*
 

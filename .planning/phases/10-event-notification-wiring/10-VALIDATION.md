@@ -38,10 +38,10 @@ created: 2026-03-12
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 10-01-01 | 01 | 1 | MON-01 | unit | `.venv/bin/python -m pytest tests/trading/test_event_wiring.py -x` | ❌ W0 | ⬜ pending |
-| 10-01-02 | 01 | 1 | MON-01 | unit | `.venv/bin/python -m pytest tests/trading/test_event_wiring.py -x` | ❌ W0 | ⬜ pending |
-| 10-02-01 | 02 | 1 | DISC-01 | unit | `.venv/bin/python -m pytest tests/trading/test_backtest_events.py -x` | ❌ W0 | ⬜ pending |
-| 10-02-02 | 02 | 1 | DISC-01 | unit | `.venv/bin/python -m pytest tests/trading/test_backtest_events.py -x` | ❌ W0 | ⬜ pending |
+| 10-01-01 | 01 | 1 | MON-01 | unit | `.venv/bin/python -m pytest tests/test_event_notifier.py -x` | ❌ W0 | ⬜ pending |
+| 10-01-02 | 01 | 1 | MON-01 | unit | `.venv/bin/python -m pytest tests/test_event_notifier.py -x` | ❌ W0 | ⬜ pending |
+| 10-01-03 | 01 | 1 | DISC-01 | unit | `.venv/bin/python -m pytest tests/test_event_notifier.py -x` | ❌ W0 | ⬜ pending |
+| 10-01-04 | 01 | 1 | DISC-01 | unit | `.venv/bin/python -m pytest tests/test_event_notifier.py -x` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,8 +49,7 @@ created: 2026-03-12
 
 ## Wave 0 Requirements
 
-- [ ] `tests/trading/test_event_wiring.py` — stubs for MON-01 (lifecycle + system error notifications)
-- [ ] `tests/trading/test_backtest_events.py` — stubs for DISC-01 (backtest completion notifications)
+- [ ] `tests/test_event_notifier.py` — stubs for MON-01 + DISC-01 (all event notification tests)
 
 *Existing MemoryNotifier fixture covers notification capture needs.*
 
