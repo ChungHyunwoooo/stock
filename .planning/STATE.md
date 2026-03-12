@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-12T04:44:44.273Z"
-last_activity: 2026-03-12 — Plan 09-02 complete (Bootstrap full component assembly + monitor daemon)
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-12T04:54:13.880Z"
+last_activity: 2026-03-12 — Plan 09-01 complete (PositionSizer + PortfolioRiskManager wiring into orchestrator)
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
   percent: 96
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 9 of 9 (Production Wiring)
-Plan: 2 of 2 in current phase
+Plan: 1 of 2 in current phase
 Status: In Progress
-Last activity: 2026-03-12 — Plan 09-02 complete (Bootstrap full component assembly + monitor daemon)
+Last activity: 2026-03-12 — Plan 09-01 complete (PositionSizer + PortfolioRiskManager wiring into orchestrator)
 
 Progress: [██████████] 96%
 
@@ -65,6 +65,7 @@ Progress: [██████████] 96%
 | Phase 08 P01 | 3min | 2 tasks | 11 files |
 | Phase 08 P02 | 3min | 2 tasks | 6 files |
 | Phase 09 P02 | 3min | 2 tasks | 2 files |
+| Phase 09 P01 | 12min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Recent decisions affecting current work:
 - [Phase 08]: DashboardDataService wraps repos directly -- no FastAPI layer (anti-pattern compliance)
 - [Phase 08]: 10s auto-refresh for sweep (faster than 30s health -- sweep changes rapidly)
 - [Phase 09]: position_sizer exposed on TradingRuntime (not injected into orchestrator -- orchestrator has no position_sizer param)
+- [Phase 09]: Transient metadata pattern: ohlcv_df/returns stripped before JSON persistence, restored after processing
 
 ### Pending Todos
 
@@ -129,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T04:44:44.265Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-12T04:54:13.877Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
