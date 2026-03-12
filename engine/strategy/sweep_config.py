@@ -47,6 +47,7 @@ class SweepConfig:
     market: str = "crypto_futures"
     sharpe_threshold: float = 0.5
     wf_gap_threshold: float = 0.5
+    validation_mode: str = "walk_forward"  # "walk_forward" | "cpcv"
     entry_conditions_template: list[dict] = field(default_factory=list)
     exit_conditions_template: list[dict] = field(default_factory=list)
 
@@ -73,6 +74,7 @@ class SweepConfig:
             market=d.get("market", "crypto_futures"),
             sharpe_threshold=d.get("sharpe_threshold", 0.5),
             wf_gap_threshold=d.get("wf_gap_threshold", 0.5),
+            validation_mode=d.get("validation_mode", "walk_forward"),
             entry_conditions_template=d.get("entry_conditions_template", []),
             exit_conditions_template=d.get("exit_conditions_template", []),
         )

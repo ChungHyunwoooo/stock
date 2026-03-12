@@ -163,10 +163,19 @@ class IndicatorSweeper:
             market=self._config.market,
         )
 
-        # Walk-forward OOS 검증
-        wf = WalkForwardValidator(gap_threshold=self._config.wf_gap_threshold)
-        wf_result = wf.validate(result.equity_curve)
-        if not wf_result.overall_passed:
+        # Validation (WalkForward or CPCV)
+        if self._config.validation_mode == "cpcv":
+            from engine.backtest.cpcv import CPCVValidator
+            validator = CPCVValidator(gap_threshold=self._config.wf_gap_threshold)
+            try:
+                vr = validator.validate(result.equity_curve)
+            except ValueError:
+                return float("-inf")
+        else:
+            validator = WalkForwardValidator(gap_threshold=self._config.wf_gap_threshold)
+            vr = validator.validate(result.equity_curve)
+
+        if not vr.overall_passed:
             return float("-inf")
 
         # Multi-symbol 검증

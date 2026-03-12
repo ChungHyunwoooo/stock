@@ -64,6 +64,21 @@ class TestSweepConfig:
         assert config.symbols == ["BTCUSDT", "ETHUSDT"]
         assert config.sharpe_threshold == 0.5
 
+    def test_from_dict_parses_validation_mode(self):
+        from engine.strategy.sweep_config import SweepConfig
+
+        d = _make_sweep_config_dict()
+        d["validation_mode"] = "cpcv"
+        config = SweepConfig.from_dict(d)
+        assert config.validation_mode == "cpcv"
+
+    def test_default_validation_mode(self):
+        from engine.strategy.sweep_config import SweepConfig
+
+        d = _make_sweep_config_dict()
+        config = SweepConfig.from_dict(d)
+        assert config.validation_mode == "walk_forward"
+
 
 # ---------------------------------------------------------------------------
 # Test 2: _build_strategy
@@ -240,6 +255,82 @@ class TestRegisterCandidates:
 
         assert len(candidates) >= 1
         MockLM.return_value.register.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 6: _notify_results (mock DiscordWebhookNotifier)
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Test: _objective CPCV mode
+# ---------------------------------------------------------------------------
+
+class TestObjectiveCPCV:
+    @patch("engine.strategy.indicator_sweeper.MultiSymbolValidator")
+    @patch("engine.strategy.indicator_sweeper.WalkForwardValidator")
+    @patch("engine.strategy.indicator_sweeper.BacktestRunner")
+    def test_objective_uses_cpcv_validator(self, MockRunner, MockWF, MockMS):
+        import optuna
+
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+        from engine.strategy.sweep_config import SweepConfig
+
+        d = _make_sweep_config_dict()
+        d["validation_mode"] = "cpcv"
+        config = SweepConfig.from_dict(d)
+        sweeper = IndicatorSweeper(config)
+
+        # Mock BacktestRunner
+        mock_result = MagicMock()
+        mock_result.equity_curve = _mock_equity_curve()
+        MockRunner.return_value.run.return_value = mock_result
+
+        # Mock MultiSymbolValidator — passed
+        mock_ms_result = MagicMock()
+        mock_ms_result.passed = True
+        mock_ms_result.median_sharpe = 1.5
+        MockMS.return_value.validate.return_value = mock_ms_result
+
+        # Patch CPCVValidator (lazy import inside _objective)
+        mock_cpcv_result = MagicMock()
+        mock_cpcv_result.overall_passed = True
+        with patch("engine.backtest.cpcv.CPCVValidator") as MockCPCV:
+            MockCPCV.return_value.validate.return_value = mock_cpcv_result
+
+            study = optuna.create_study(direction="maximize")
+            trial = study.ask()
+            score = sweeper._objective(trial)
+
+        assert score == 1.5
+        MockCPCV.return_value.validate.assert_called_once()
+        MockWF.return_value.validate.assert_not_called()
+
+    @patch("engine.strategy.indicator_sweeper.MultiSymbolValidator")
+    @patch("engine.strategy.indicator_sweeper.WalkForwardValidator")
+    @patch("engine.strategy.indicator_sweeper.BacktestRunner")
+    def test_objective_cpcv_value_error_returns_neg_inf(self, MockRunner, MockWF, MockMS):
+        import optuna
+
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+        from engine.strategy.sweep_config import SweepConfig
+
+        d = _make_sweep_config_dict()
+        d["validation_mode"] = "cpcv"
+        config = SweepConfig.from_dict(d)
+        sweeper = IndicatorSweeper(config)
+
+        mock_result = MagicMock()
+        mock_result.equity_curve = _mock_equity_curve(n=10)  # short curve
+        MockRunner.return_value.run.return_value = mock_result
+
+        with patch("engine.backtest.cpcv.CPCVValidator") as MockCPCV:
+            MockCPCV.return_value.validate.side_effect = ValueError("equity curve too short")
+
+            study = optuna.create_study(direction="maximize")
+            trial = study.ask()
+            score = sweeper._objective(trial)
+
+        assert score == float("-inf")
 
 
 # ---------------------------------------------------------------------------
