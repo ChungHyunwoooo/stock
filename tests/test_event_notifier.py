@@ -265,3 +265,122 @@ class TestSystemErrorNotification:
         assert "[CRITICAL]" in mem.messages[0]
         assert "bootstrap" in mem.messages[0]
         assert "test error" in mem.messages[0]
+
+
+# --- Phase 10 Task 2 tests ---
+
+
+class TestSweeperNotification:
+    """IndicatorSweeper(event_notifier=en) sends per-candidate [BACKTEST] notifications."""
+
+    def test_candidates_send_backtest_notifications(self, tmp_path: Path) -> None:
+        import optuna
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+        from engine.strategy.sweep_config import SweepConfig, IndicatorSearchSpace
+
+        en, mem = _make_notifier()
+
+        config = SweepConfig(
+            symbols=["BTC/USDT"],
+            start="2024-01-01",
+            end="2024-03-01",
+            timeframe="1d",
+            market="crypto_spot",
+            n_trials=5,
+            sharpe_threshold=0.5,
+            indicators=[IndicatorSearchSpace(
+                indicator_name="rsi",
+                param_ranges={"period": (10, 20, 1)},
+                output_template="rsi_{period}",
+            )],
+        )
+
+        registry_path = tmp_path / "registry.json"
+        registry_path.write_text(json.dumps({"strategies": []}))
+
+        sweeper = IndicatorSweeper(config, registry_path=str(registry_path), event_notifier=en)
+
+        # Create a mock study with 2 passing trials
+        study = optuna.create_study(direction="maximize")
+
+        # Add trials that pass threshold (0.5)
+        for i, val in enumerate([0.8, 1.2, 0.3]):
+            trial = study.ask()
+            trial.suggest_int("rsi_period", 10, 20, step=1)
+            study.tell(trial, val)
+
+        with patch.object(LifecycleManager, "register"):
+            candidates = sweeper._register_candidates(study)
+
+        # 2 trials pass threshold (0.8, 1.2), 1 fails (0.3)
+        assert len(candidates) == 2
+        backtest_msgs = [m for m in mem.messages if "[BACKTEST]" in m]
+        assert len(backtest_msgs) == 2
+
+
+class TestSweeperBackwardCompat:
+    """IndicatorSweeper(config) without event_notifier works."""
+
+    def test_no_event_notifier(self) -> None:
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+        from engine.strategy.sweep_config import SweepConfig, IndicatorSearchSpace
+
+        config = SweepConfig(
+            symbols=["BTC/USDT"],
+            start="2024-01-01",
+            end="2024-03-01",
+            timeframe="1d",
+            market="crypto_spot",
+            n_trials=5,
+            sharpe_threshold=0.5,
+            indicators=[IndicatorSearchSpace(
+                indicator_name="rsi",
+                param_ranges={"period": (10, 20, 1)},
+                output_template="rsi_{period}",
+            )],
+        )
+        sweeper = IndicatorSweeper(config)
+        assert sweeper._event_notifier is None
+
+
+class TestSweeperNoCandidate:
+    """No [BACKTEST] notifications when all trials are below threshold."""
+
+    def test_no_candidates_no_notifications(self, tmp_path: Path) -> None:
+        import optuna
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+        from engine.strategy.sweep_config import SweepConfig, IndicatorSearchSpace
+
+        en, mem = _make_notifier()
+
+        config = SweepConfig(
+            symbols=["BTC/USDT"],
+            start="2024-01-01",
+            end="2024-03-01",
+            timeframe="1d",
+            market="crypto_spot",
+            n_trials=5,
+            sharpe_threshold=2.0,
+            indicators=[IndicatorSearchSpace(
+                indicator_name="rsi",
+                param_ranges={"period": (10, 20, 1)},
+                output_template="rsi_{period}",
+            )],
+        )
+
+        registry_path = tmp_path / "registry.json"
+        registry_path.write_text(json.dumps({"strategies": []}))
+
+        sweeper = IndicatorSweeper(config, registry_path=str(registry_path), event_notifier=en)
+
+        study = optuna.create_study(direction="maximize")
+        for val in [0.3, 0.1, -0.5]:
+            trial = study.ask()
+            trial.suggest_int("rsi_period", 10, 20, step=1)
+            study.tell(trial, val)
+
+        candidates = sweeper._register_candidates(study)
+
+        assert len(candidates) == 0
+        backtest_msgs = [m for m in mem.messages if "[BACKTEST]" in m]
+        assert len(backtest_msgs) == 0

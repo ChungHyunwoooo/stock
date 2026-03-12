@@ -13,8 +13,12 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import optuna
+
+if TYPE_CHECKING:
+    from engine.notifications.event_notifier import EventNotifier
 
 from engine.backtest.multi_symbol import MultiSymbolValidator
 from engine.backtest.runner import BacktestRunner
@@ -52,9 +56,11 @@ class IndicatorSweeper:
         self,
         config: SweepConfig,
         registry_path: str = "strategies/registry.json",
+        event_notifier: EventNotifier | None = None,
     ) -> None:
         self._config = config
         self._registry_path = registry_path
+        self._event_notifier = event_notifier
 
     def run(self) -> list[dict]:
         """Optuna study 생성 + sweep 실행 + 후보 등록 + Discord 통보.
@@ -308,6 +314,18 @@ class IndicatorSweeper:
                     "sharpe": trial.value,
                     "params": trial.params,
                 })
+
+                if self._event_notifier is not None:
+                    try:
+                        self._event_notifier.notify_backtest_complete(
+                            strategy_id=strategy_id,
+                            symbol=self._config.symbols[0],
+                            sharpe=trial.value,
+                            total_return=0.0,
+                            max_dd=None,
+                        )
+                    except Exception as e:
+                        logger.warning("sweep candidate notification failed: %s", e)
 
         return candidates
 
