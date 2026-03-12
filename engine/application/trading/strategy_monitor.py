@@ -41,5 +41,7 @@ class StrategyMonitorService:
         if signal is None:
             return None
         if execute:
-            self.orchestrator.process_signal(signal, quantity=quantity)
+            if "ohlcv_df" not in signal.metadata:
+                signal.metadata["ohlcv_df"] = frame
+            self.orchestrator.process_signal(signal)
         return signal

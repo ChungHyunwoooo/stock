@@ -83,9 +83,11 @@ def build_trading_runtime(config: TradingRuntimeConfig | None = None) -> Trading
         notifier=notifier,
     )
 
-    # -- Orchestrator with portfolio_risk injected --
+    # -- Orchestrator with position_sizer + portfolio_risk injected --
     orchestrator = TradingOrchestrator(
-        store, notifier, broker, portfolio_risk=portfolio_risk,
+        store, notifier, broker,
+        position_sizer=position_sizer,
+        portfolio_risk=portfolio_risk,
     )
     control = TradingControlService(store, notifier, broker)
 

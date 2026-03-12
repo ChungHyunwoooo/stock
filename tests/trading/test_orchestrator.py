@@ -5,7 +5,7 @@ import pandas as pd
 
 from engine.application.trading import TradingControlService, TradingOrchestrator
 from engine.core import SignalAction, TradeSide, TradingMode, TradingSignal
-from engine.core.models import ExecutionRecord, OrderRequest, Position, PositionStatus, utc_now_iso, TradingRuntimeState
+from engine.core.models import BrokerKind, ExecutionRecord, OrderRequest, Position, PositionStatus, utc_now_iso, TradingRuntimeState
 from engine.notifications import MemoryNotifier
 from engine.core import JsonRuntimeStore
 from engine.strategy.position_sizer import PositionSizeResult
@@ -24,11 +24,14 @@ def _mock_broker() -> MagicMock:
             side=order.side,
             quantity=order.quantity,
             price=order.price,
+            broker=BrokerKind.paper,
             status="filled",
             executed_at=utc_now_iso(),
         )
         # Mimic position update like real broker
+        from uuid import uuid4
         pos = Position(
+            position_id=uuid4().hex[:12],
             symbol=order.symbol,
             side=order.side,
             quantity=order.quantity,

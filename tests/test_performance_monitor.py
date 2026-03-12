@@ -276,6 +276,8 @@ class TestOrchestratorSkipsPausedStrategy:
     def test_non_paused_strategy_executes(self):
         """paused_strategies에 없는 전략은 정상 실행."""
         from engine.application.trading.orchestrator import TradingOrchestrator
+        from engine.strategy.position_sizer import PositionSizeResult
+        import pandas as pd
 
         runtime_store = MagicMock()
         state = TradingRuntimeState(mode=TradingMode.auto)
@@ -286,11 +288,23 @@ class TestOrchestratorSkipsPausedStrategy:
         broker = MagicMock()
         execution = MagicMock()
         broker.execute_order.return_value = execution
+        broker.fetch_available.return_value = 10000.0
+
+        sizer = MagicMock()
+        sizer.calculate.return_value = PositionSizeResult(
+            quantity=1.0, risk_amount=5.0, position_value=100.0,
+            kelly_applied=False, allocation_weight=1.0, size_factor=1.0, reason="test",
+        )
+        pr = MagicMock()
+        pr.get_allocation_weights.return_value = {"active_strat": 1.0}
+        pr.check_correlation_gate.return_value = (True, "passed")
 
         orch = TradingOrchestrator(
             runtime_store=runtime_store,
             notifier=notifier,
             broker=broker,
+            position_sizer=sizer,
+            portfolio_risk=pr,
         )
 
         signal = TradingSignal(
@@ -300,6 +314,12 @@ class TestOrchestratorSkipsPausedStrategy:
             action=SignalAction.entry,
             side=TradeSide.long,
             entry_price=50000.0,
+            metadata={
+                "ohlcv_df": pd.DataFrame(
+                    {"open": [50000.0], "high": [51000.0], "low": [49000.0], "close": [50500.0], "volume": [100.0]}
+                ),
+                "returns": pd.Series([0.01, -0.005]),
+            },
         )
 
         result = orch.process_signal(signal)

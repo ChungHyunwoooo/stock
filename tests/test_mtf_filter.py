@@ -207,9 +207,10 @@ class TestTimeframeToMinutes:
 
 from engine.application.trading import TradingControlService, TradingOrchestrator
 from engine.core import SignalAction, TradingMode, TradingSignal
-from engine.execution import PaperBroker
+from engine.core.models import BrokerKind, ExecutionRecord, OrderRequest, Position, PositionStatus, utc_now_iso, TradingRuntimeState
 from engine.notifications import MemoryNotifier
 from engine.core import JsonRuntimeStore
+from engine.strategy.position_sizer import PositionSizeResult
 
 
 def _make_signal(side: TradeSide = TradeSide.long) -> TradingSignal:
@@ -223,7 +224,59 @@ def _make_signal(side: TradeSide = TradeSide.long) -> TradingSignal:
         stop_loss=95.0,
         take_profits=[110.0],
         reason="test signal",
+        metadata={
+            "ohlcv_df": pd.DataFrame(
+                {"open": [100.0], "high": [105.0], "low": [95.0], "close": [102.0], "volume": [1000.0]}
+            ),
+            "returns": pd.Series([0.01, -0.005, 0.02]),
+        },
     )
+
+
+def _mtf_mock_broker() -> MagicMock:
+    broker = MagicMock()
+
+    def _execute(order: OrderRequest, state: TradingRuntimeState) -> ExecutionRecord:
+        from uuid import uuid4
+        rec = ExecutionRecord(
+            order_id=f"mock-{order.signal_id}",
+            signal_id=order.signal_id,
+            symbol=order.symbol,
+            action=order.action,
+            side=order.side,
+            quantity=order.quantity,
+            price=order.price,
+            broker=BrokerKind.paper,
+            status="filled",
+        )
+        state.positions.append(Position(
+            position_id=uuid4().hex[:12],
+            symbol=order.symbol,
+            side=order.side,
+            quantity=order.quantity,
+            entry_price=order.price,
+        ))
+        return rec
+
+    broker.execute_order.side_effect = _execute
+    broker.fetch_available.return_value = 10000.0
+    return broker
+
+
+def _mtf_mock_sizer() -> MagicMock:
+    sizer = MagicMock()
+    sizer.calculate.return_value = PositionSizeResult(
+        quantity=1.0, risk_amount=5.0, position_value=100.0,
+        kelly_applied=False, allocation_weight=1.0, size_factor=1.0, reason="test",
+    )
+    return sizer
+
+
+def _mtf_mock_portfolio_risk() -> MagicMock:
+    pr = MagicMock()
+    pr.get_allocation_weights.return_value = {"test:1.0": 1.0}
+    pr.check_correlation_gate.return_value = (True, "passed")
+    return pr
 
 
 class TestOrchestratorMTFIntegration:
@@ -233,7 +286,7 @@ class TestOrchestratorMTFIntegration:
         """정렬된 신호 -> 주문 실행."""
         store = JsonRuntimeStore(tmp_path / "runtime.json")
         notifier = MemoryNotifier()
-        broker = PaperBroker()
+        broker = _mtf_mock_broker()
         control = TradingControlService(store, notifier, broker)
         control.set_mode(TradingMode.auto)
 
@@ -244,7 +297,11 @@ class TestOrchestratorMTFIntegration:
             MTFConfig(enabled=True, higher_timeframe="4h", ema_period=20),
             data_provider=provider,
         )
-        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=mtf)
+        sizer = _mtf_mock_sizer()
+        pr = _mtf_mock_portfolio_risk()
+        orchestrator = TradingOrchestrator(
+            store, notifier, broker, position_sizer=sizer, portfolio_risk=pr, mtf_filter=mtf,
+        )
         state = orchestrator.process_signal(_make_signal(TradeSide.long))
 
         assert len(state.executions) == 1
@@ -253,7 +310,7 @@ class TestOrchestratorMTFIntegration:
         """반대 방향 신호 -> 차단, notifier에 [MTF] 메시지."""
         store = JsonRuntimeStore(tmp_path / "runtime.json")
         notifier = MemoryNotifier()
-        broker = PaperBroker()
+        broker = _mtf_mock_broker()
         control = TradingControlService(store, notifier, broker)
         control.set_mode(TradingMode.auto)
 
@@ -264,7 +321,11 @@ class TestOrchestratorMTFIntegration:
             MTFConfig(enabled=True, higher_timeframe="4h", ema_period=20),
             data_provider=provider,
         )
-        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=mtf)
+        sizer = _mtf_mock_sizer()
+        pr = _mtf_mock_portfolio_risk()
+        orchestrator = TradingOrchestrator(
+            store, notifier, broker, position_sizer=sizer, portfolio_risk=pr, mtf_filter=mtf,
+        )
         state = orchestrator.process_signal(_make_signal(TradeSide.short))
 
         assert len(state.executions) == 0
@@ -276,11 +337,15 @@ class TestOrchestratorMTFIntegration:
         """mtf_filter=None -> 기존 동작 유지."""
         store = JsonRuntimeStore(tmp_path / "runtime.json")
         notifier = MemoryNotifier()
-        broker = PaperBroker()
+        broker = _mtf_mock_broker()
         control = TradingControlService(store, notifier, broker)
         control.set_mode(TradingMode.auto)
 
-        orchestrator = TradingOrchestrator(store, notifier, broker, mtf_filter=None)
+        sizer = _mtf_mock_sizer()
+        pr = _mtf_mock_portfolio_risk()
+        orchestrator = TradingOrchestrator(
+            store, notifier, broker, position_sizer=sizer, portfolio_risk=pr, mtf_filter=None,
+        )
         state = orchestrator.process_signal(_make_signal())
 
         assert len(state.executions) == 1

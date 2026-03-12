@@ -199,6 +199,7 @@ class TestOrchestratorIntegration:
             TradingMode,
             TradingRuntimeState,
         )
+        from engine.strategy.position_sizer import PositionSizeResult
 
         runtime_store = MagicMock()
         state = TradingRuntimeState(mode=TradingMode.auto)
@@ -221,16 +222,37 @@ class TestOrchestratorIntegration:
             broker=BrokerKind.paper,
             status="filled",
         )
+        broker.fetch_available.return_value = 10000.0
+
+        sizer = MagicMock()
+        sizer.calculate.return_value = PositionSizeResult(
+            quantity=0.01, risk_amount=5.0, position_value=500.0,
+            kelly_applied=False, allocation_weight=1.0, size_factor=1.0, reason="test",
+        )
+
+        # If no portfolio_risk provided, create a default mock for sizer path
+        if portfolio_risk is None:
+            default_pr = MagicMock()
+            default_pr.get_allocation_weights.return_value = {"strat_b": 1.0}
+            default_pr.check_correlation_gate.return_value = (True, "passed")
+            portfolio_risk = default_pr
+        else:
+            # Ensure the provided mock has get_allocation_weights
+            if not hasattr(portfolio_risk.get_allocation_weights, 'return_value') or \
+               portfolio_risk.get_allocation_weights.return_value is MagicMock():
+                portfolio_risk.get_allocation_weights.return_value = {"strat_b": 1.0}
 
         orch = TradingOrchestrator(
             runtime_store=runtime_store,
             notifier=notifier,
             broker=broker,
+            position_sizer=sizer,
             portfolio_risk=portfolio_risk,
         )
         return orch, runtime_store, notifier, broker
 
     def _make_signal(self):
+        import pandas as pd
         from engine.core.models import SignalAction, TradeSide, TradingSignal
         return TradingSignal(
             strategy_id="strat_b",
@@ -239,6 +261,12 @@ class TestOrchestratorIntegration:
             action=SignalAction.entry,
             side=TradeSide.long,
             entry_price=50000.0,
+            metadata={
+                "ohlcv_df": pd.DataFrame(
+                    {"open": [50000.0], "high": [51000.0], "low": [49000.0], "close": [50500.0], "volume": [100.0]}
+                ),
+                "returns": pd.Series([0.01, -0.005]),
+            },
         )
 
     def test_blocked_by_portfolio_risk(self):
@@ -273,6 +301,7 @@ class TestOrchestratorIntegration:
         """상관관계 통과 시 정상 실행."""
         mock_pr = MagicMock()
         mock_pr.check_correlation_gate.return_value = (True, "passed")
+        mock_pr.get_allocation_weights.return_value = {"strat_b": 1.0}
 
         orch, runtime_store, notifier, broker = self._make_orchestrator(portfolio_risk=mock_pr)
         signal = self._make_signal()

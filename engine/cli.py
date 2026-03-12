@@ -674,7 +674,7 @@ def runtime_emit_sample(
         take_profits=[price * 1.02] if action == "entry" else [],
         reason="CLI sample signal",
     )
-    state = runtime.orchestrator.process_signal(signal, quantity=quantity)
+    state = runtime.orchestrator.process_signal(signal)
     _print_runtime_state(state)
 
 @runtime_app.command("evaluate")

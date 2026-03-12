@@ -225,6 +225,10 @@ class RecentSignalAnalysisService:
             signals.append(pattern_signal)
 
         signals.sort(key=lambda item: (item.confidence, item.strategy_id), reverse=True)
+        # Attach OHLCV for downstream PositionSizer
+        for sig in signals:
+            if "ohlcv_df" not in sig.metadata:
+                sig.metadata["ohlcv_df"] = frame
         return _build_report_from_frame(
             frame=frame,
             symbol=symbol,
@@ -345,6 +349,7 @@ class RecentSignalAnalysisService:
                 "regime_ok": confluence["regime_ok"],
                 "session": confluence["session"],
                 "session_ok": confluence["session_ok"],
+                "ohlcv_df": entry_frame,
             },
         )
         return [signal]
@@ -395,7 +400,7 @@ class AlertScannerRuntime:
                     key = f"{signal.strategy_id}:{signal.symbol}:{signal.timeframe}:{signal.action.value}"
                     if now - sent_state.get(key, 0.0) < self.config.cooldown_sec:
                         continue
-                    self.orchestrator.process_signal(signal, quantity=self.config.quantity)
+                    self.orchestrator.process_signal(signal)
                     sent_state[key] = now
                     emitted.append(signal)
 
@@ -449,7 +454,7 @@ class AlertScannerRuntime:
                     key = f"{signal.strategy_id}:{signal.symbol}:{signal.timeframe}:{signal.action.value}"
                     if now - sent_state.get(key, 0.0) < self.config.cooldown_sec:
                         continue
-                    self.orchestrator.process_signal(signal, quantity=self.config.quantity)
+                    self.orchestrator.process_signal(signal)
                     sent_state[key] = now
                     emitted.append(signal)
 
