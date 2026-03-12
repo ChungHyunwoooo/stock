@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Backtest Quality
 
 - [x] **BT-01**: 거래소별 슬리피지+수수료 모델을 백테스트에 적용할 수 있다 (configurable per exchange, VolumeAdjustedSlippage 지원)
-- [ ] **BT-02**: Walk-forward OOS 검증으로 전략의 과적합을 방지할 수 있다 (다기간 IS/OOS 분할, IS-OOS 성과 갭 임계치 적용)
+- [x] **BT-02**: Walk-forward OOS 검증으로 전략의 과적합을 방지할 수 있다 (다기간 IS/OOS 분할, IS-OOS 성과 갭 임계치 적용)
 - [x] **BT-03**: 전략이 2-3개 비상관 심볼에서 일관된 성과를 보이는지 검증할 수 있다 (중앙 Sharpe 기준 통과)
 - [x] **BT-04**: 백테스트 결과를 DB에 저장하고 전략별/날짜별 이력을 비교할 수 있다
 - [ ] **BT-05**: CPCV(Combinatorial Purged Cross-Validation)로 walk-forward를 고도화할 수 있다
@@ -19,26 +19,26 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **LIFE-01**: 전략 상태가 draft→testing→paper→active→archived 순서로만 전이되며, 규칙 위반 전이를 차단한다
 - [x] **LIFE-02**: 페이퍼 트레이딩 단계에서 PaperBroker 상태가 세션 간 영속되고 PnL이 추적된다
-- [x] **LIFE-03**: Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준을 자동 검증하고, 미충족 시 승격을 차단한다
+- [ ] **LIFE-03**: Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준을 자동 검증하고, 미충족 시 승격을 차단한다
 - [x] **LIFE-04**: 논문/커뮤니티의 레퍼런스 전략을 JSON StrategyDefinition으로 변환하는 구조화된 워크플로우가 있다
 
 ### Risk Management
 
-- [x] **RISK-01**: 실매매 전략의 20거래 롤링 윈도우 성과가 백테스트 기준 대비 저하되면 Discord 알림을 발송한다
-- [x] **RISK-02**: ATR 또는 Kelly fraction 기반으로 변동성에 따른 가변 포지션 사이징이 적용된다
+- [ ] **RISK-01**: 실매매 전략의 20거래 롤링 윈도우 성과가 백테스트 기준 대비 저하되면 Discord 알림을 발송한다
+- [ ] **RISK-02**: ATR 또는 Kelly fraction 기반으로 변동성에 따른 가변 포지션 사이징이 적용된다
 - [x] **RISK-03**: 신규 진입 시 기존 활성 전략과의 신호 상관관계가 0.7 초과이면 진입을 차단한다
 
 ### Monitoring & Alerts
 
-- [x] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
-- [ ] **MON-02**: Discord /status 커맨드로 현재 포지션, 일일 PnL, 전략 상태를 즉시 조회할 수 있다
+- [ ] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
+- [x] **MON-02**: Discord /status 커맨드로 현재 포지션, 일일 PnL, 전략 상태를 즉시 조회할 수 있다
 - [x] **MON-03**: 웹 대시보드에서 실시간 포지션, 전략 성과, 시스템 상태, 전략 탐색 현황, 설정을 확인/변경할 수 있다
-- [ ] **MON-04**: 단기 타임프레임 진입 신호를 상위 타임프레임 방향 확인으로 필터링할 수 있다 (MTF confirmation gate)
+- [x] **MON-04**: 단기 타임프레임 진입 신호를 상위 타임프레임 방향 확인으로 필터링할 수 있다 (MTF confirmation gate)
 
 ### Strategy Discovery
 
-- [x] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
-- [ ] **DISC-02**: ccxt 기반으로 Binance/Upbit 외 거래소(Bybit, OKX 등)의 데이터 수급 및 주문 실행을 지원한다
+- [ ] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
+- [x] **DISC-02**: ccxt 기반으로 Binance/Upbit 외 거래소(Bybit, OKX 등)의 데이터 수급 및 주문 실행을 지원한다
 
 ## v2 Requirements
 
@@ -68,23 +68,23 @@ Deferred to future release. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BT-01 | Phase 2 | Complete |
-| BT-02 | Phase 2 | Pending |
+| BT-02 | Phase 2 | Complete |
 | BT-03 | Phase 2 | Complete |
 | BT-04 | Phase 2 | Complete |
-| BT-05 | Phase 2 | Pending |
+| BT-05 | Phase 11 | Pending |
 | LIFE-01 | Phase 1 | Complete |
 | LIFE-02 | Phase 3 | Complete |
-| LIFE-03 | Phase 3 | Complete |
+| LIFE-03 | Phase 11 | Pending |
 | LIFE-04 | Phase 1 | Complete |
-| RISK-01 | Phase 5 | Complete |
-| RISK-02 | Phase 4 | Complete |
+| RISK-01 | Phase 9 | Pending |
+| RISK-02 | Phase 9 | Pending |
 | RISK-03 | Phase 4 | Complete |
-| MON-01 | Phase 6 | Complete |
-| MON-02 | Phase 6 | Pending |
+| MON-01 | Phase 10 | Pending |
+| MON-02 | Phase 6 | Complete |
 | MON-03 | Phase 8 | Complete |
-| MON-04 | Phase 6 | Pending |
-| DISC-01 | Phase 7 | Complete |
-| DISC-02 | Phase 7 | Pending |
+| MON-04 | Phase 6 | Complete |
+| DISC-01 | Phase 10 | Pending |
+| DISC-02 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total

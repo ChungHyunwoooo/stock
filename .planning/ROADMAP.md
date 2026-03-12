@@ -18,6 +18,9 @@
 - [ ] **Phase 6: Alert & MTF Enrichment** - Discord 알림 통합 고도화 + 멀티 타임프레임 진입 필터 활성화
 - [ ] **Phase 7: Auto-Discovery** - Optuna 기반 Bayesian 파라미터 탐색 + ccxt 멀티거래소 확장
 - [ ] **Phase 8: Monitoring Dashboard** - Streamlit 대시보드로 전략 파이프라인 전체 가시화
+- [ ] **Phase 9: Production Wiring** - PositionSizer + PerformanceMonitor 프로덕션 배선 (gap closure)
+- [ ] **Phase 10: Event & Notification Wiring** - EventNotifier 4개 이벤트 + BacktestHistoryPlugin 활성화 (gap closure)
+- [ ] **Phase 11: Cross-Phase Data Contracts** - PromotionGate 백테스트 비교 + CPCV sweep 통합 (gap closure)
 
 ## Phase Details
 
@@ -146,6 +149,48 @@ Plans:
 - [ ] 08-01-PLAN.md — DashboardDataService + 멀티페이지 대시보드 (Lifecycle 뷰 + Portfolio PnL + System Health)
 - [ ] 08-02-PLAN.md — IndicatorSweeper sweep_status.json writer + Sweep Progress 패널 + Settings Editor
 
+### Phase 9: Production Wiring — Orchestrator & Bootstrap
+**Goal:** 구현 완료된 PositionSizer와 PerformanceMonitor가 프로덕션 실행 경로에 실제로 배선되어 동작한다
+**Depends on**: Phase 5
+**Requirements**: RISK-01, RISK-02
+**Gap Closure:** Closes gaps from audit (P0 — Production Behavior Breaks)
+**Success Criteria** (what must be TRUE):
+  1. orchestrator.process_signal()에서 PositionSizer.calculate()가 호출되어 quantity가 ATR/Kelly 기반으로 계산된다
+  2. PortfolioRiskManager.get_allocation_weights()가 주문 전 호출된다
+  3. application bootstrap에서 StrategyPerformanceMonitor.run_daemon()이 시작되어 데몬 스레드가 실행된다
+**Plans**: 0 plans
+
+Plans:
+- (to be planned with `/gsd:plan-phase 9`)
+
+### Phase 10: Event & Notification Wiring
+**Goal:** EventNotifier의 4개 이벤트 타입이 모두 프로덕션에서 발화되고, BacktestHistoryPlugin이 Discord에서 활성화된다
+**Depends on**: Phase 6
+**Requirements**: MON-01, DISC-01
+**Gap Closure:** Closes gaps from audit (P1 — Cross-Phase Contract Incomplete)
+**Success Criteria** (what must be TRUE):
+  1. LifecycleManager 상태 전이 시 notify_lifecycle_transition이 호출된다
+  2. BacktestRunner.run() 완료 시 notify_backtest_complete가 호출된다
+  3. IndicatorSweeper sweep 완료 시 notify_backtest_complete가 호출된다
+  4. BacktestHistoryPlugin이 DEFAULT_COMMAND_PLUGINS에 등록되어 Discord 커맨드가 활성화된다
+**Plans**: 0 plans
+
+Plans:
+- (to be planned with `/gsd:plan-phase 10`)
+
+### Phase 11: Cross-Phase Data Contracts
+**Goal:** PromotionGate가 백테스트 기준값과 교차 비교하고, CPCV가 sweep 파이프라인에서 사용 가능하다
+**Depends on**: Phase 7
+**Requirements**: LIFE-03, BT-05
+**Gap Closure:** Closes gaps from audit (P1 — Cross-Phase Contract Incomplete)
+**Success Criteria** (what must be TRUE):
+  1. PromotionGate.evaluate()가 BacktestRepository 기준 Sharpe와 비교하여 paper Sharpe가 낮으면 승격을 차단한다
+  2. IndicatorSweeper._objective()에서 CPCV 모드를 선택하면 WalkForward 대신 CPCV 교차검증이 실행된다
+**Plans**: 0 plans
+
+Plans:
+- (to be planned with `/gsd:plan-phase 11`)
+
 ## Progress
 
 **Execution Order:**
@@ -161,3 +206,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Alert & MTF Enrichment | 1/3 | In Progress|  |
 | 7. Auto-Discovery | 0/2 | Not started | - |
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
+| 9. Production Wiring | 0/0 | Not started | - |
+| 10. Event & Notification Wiring | 0/0 | Not started | - |
+| 11. Cross-Phase Data Contracts | 0/0 | Not started | - |
