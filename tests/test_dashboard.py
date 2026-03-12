@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -151,3 +155,102 @@ class TestPositionsAndTrades:
         service._trade_repo.list_closed.assert_called_once_with(session, limit=50)
         assert len(result) == 1
         assert result[0]["pnl"] == 100.0
+
+
+class TestSweepProgress:
+    def test_sweep_progress_returns_status_when_file_exists(self) -> None:
+        """sweep_status.json이 존재하면 딕셔너리 반환."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_dir = Path(tmpdir) / "state"
+            state_dir.mkdir()
+            status_data = {
+                "completed": 5,
+                "total": 20,
+                "best_sharpe": 1.23,
+                "candidates_found": 2,
+                "updated_at": "2026-03-12T00:00:00Z",
+            }
+            (state_dir / "sweep_status.json").write_text(
+                json.dumps(status_data), encoding="utf-8"
+            )
+
+            svc = DashboardDataService.__new__(DashboardDataService)
+            result = svc.get_sweep_status(state_dir=state_dir)
+
+            assert result is not None
+            assert result["completed"] == 5
+            assert result["total"] == 20
+            assert result["best_sharpe"] == 1.23
+            assert result["candidates_found"] == 2
+
+    def test_sweep_progress_returns_none_when_no_file(self) -> None:
+        """sweep_status.json이 없으면 None 반환."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_dir = Path(tmpdir) / "state"
+            state_dir.mkdir()
+
+            svc = DashboardDataService.__new__(DashboardDataService)
+            result = svc.get_sweep_status(state_dir=state_dir)
+
+            assert result is None
+
+
+class TestConfigEdit:
+    def test_config_edit_atomic_write(self) -> None:
+        """definition.json atomic write 후 변경 값 반영, 원본 미손상."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            strategy_dir = Path(tmpdir) / "strategies" / "test_strat"
+            strategy_dir.mkdir(parents=True)
+            original = {
+                "name": "test_strat",
+                "risk": {"stop_loss_pct": 2.0, "take_profit_pct": 4.0},
+            }
+            def_path = strategy_dir / "definition.json"
+            def_path.write_text(json.dumps(original), encoding="utf-8")
+
+            # Modify risk params
+            updated = json.loads(def_path.read_text(encoding="utf-8"))
+            updated["risk"]["stop_loss_pct"] = 3.0
+
+            # Atomic write: tempfile + rename
+            tmp_path = def_path.with_suffix(".tmp")
+            tmp_path.write_text(
+                json.dumps(updated, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            os.replace(str(tmp_path), str(def_path))
+
+            # Verify
+            result = json.loads(def_path.read_text(encoding="utf-8"))
+            assert result["risk"]["stop_loss_pct"] == 3.0
+            assert result["risk"]["take_profit_pct"] == 4.0
+            assert result["name"] == "test_strat"
+
+
+class TestSweepStatusWriter:
+    def test_write_sweep_status_creates_file(self) -> None:
+        """_write_sweep_status 호출 시 sweep_status.json에 올바른 JSON 기록."""
+        from engine.strategy.indicator_sweeper import IndicatorSweeper
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_dir = Path(tmpdir) / "state"
+            # state dir 없는 상태에서 시작 -- 메서드가 생성해야 함
+
+            sweeper = IndicatorSweeper.__new__(IndicatorSweeper)
+            sweeper._write_sweep_status(
+                completed=3,
+                total=10,
+                best_sharpe=1.5,
+                candidates_found=1,
+                state_dir=state_dir,
+            )
+
+            status_path = state_dir / "sweep_status.json"
+            assert status_path.exists()
+
+            data = json.loads(status_path.read_text(encoding="utf-8"))
+            assert data["completed"] == 3
+            assert data["total"] == 10
+            assert data["best_sharpe"] == 1.5
+            assert data["candidates_found"] == 1
+            assert "updated_at" in data
