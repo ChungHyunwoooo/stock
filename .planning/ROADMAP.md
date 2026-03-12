@@ -158,10 +158,11 @@ Plans:
   1. orchestrator.process_signal()에서 PositionSizer.calculate()가 호출되어 quantity가 ATR/Kelly 기반으로 계산된다
   2. PortfolioRiskManager.get_allocation_weights()가 주문 전 호출된다
   3. application bootstrap에서 StrategyPerformanceMonitor.run_daemon()이 시작되어 데몬 스레드가 실행된다
-**Plans**: 0 plans
+**Plans**: 2 plans
 
 Plans:
-- (to be planned with `/gsd:plan-phase 9`)
+- [ ] 09-01-PLAN.md — PositionSizer + PortfolioRiskManager orchestrator 배선 (process_signal 동적 사이징)
+- [ ] 09-02-PLAN.md — Bootstrap 컴포넌트 조립 + PerformanceMonitor 데몬 시작
 
 ### Phase 10: Event & Notification Wiring
 **Goal:** EventNotifier의 4개 이벤트 타입이 모두 프로덕션에서 발화되고, BacktestHistoryPlugin이 Discord에서 활성화된다
@@ -206,6 +207,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Alert & MTF Enrichment | 1/3 | In Progress|  |
 | 7. Auto-Discovery | 0/2 | Not started | - |
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
-| 9. Production Wiring | 0/0 | Not started | - |
+| 9. Production Wiring | 0/2 | Not started | - |
 | 10. Event & Notification Wiring | 0/0 | Not started | - |
 | 11. Cross-Phase Data Contracts | 0/0 | Not started | - |
