@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-12T04:56:53.358Z"
-last_activity: 2026-03-12 — Plan 09-01 complete (PositionSizer + PortfolioRiskManager wiring into orchestrator)
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-12T06:07:16.586Z"
+last_activity: 2026-03-12 — Plan 10-01 complete (EventNotifier wired into bootstrap/BacktestRunner/IndicatorSweeper)
 progress:
   total_phases: 11
-  completed_phases: 9
-  total_plans: 25
-  completed_plans: 25
+  completed_phases: 10
+  total_plans: 27
+  completed_plans: 26
   percent: 96
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** 수익을 주는 자동화 봇 — 전략 발굴부터 실매매까지 사람 개입 없이 돌아가되, 성과 저하 시 즉시 알림으로 제어권 유지
-**Current focus:** Phase 9 — Production Wiring
+**Current focus:** Phase 10 — Event Notification Wiring
 
 ## Current Position
 
-Phase: 9 of 9 (Production Wiring)
-Plan: 1 of 2 in current phase
+Phase: 10 of 11 (Event Notification Wiring)
+Plan: 1 of 1 in current phase
 Status: In Progress
-Last activity: 2026-03-12 — Plan 09-01 complete (PositionSizer + PortfolioRiskManager wiring into orchestrator)
+Last activity: 2026-03-12 — Plan 10-01 complete (EventNotifier wired into bootstrap/BacktestRunner/IndicatorSweeper)
 
 Progress: [██████████] 96%
 
@@ -66,6 +66,7 @@ Progress: [██████████] 96%
 | Phase 08 P02 | 3min | 2 tasks | 6 files |
 | Phase 09 P02 | 3min | 2 tasks | 2 files |
 | Phase 09 P01 | 12min | 2 tasks | 9 files |
+| Phase 10 P01 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 10s auto-refresh for sweep (faster than 30s health -- sweep changes rapidly)
 - [Phase 09]: position_sizer exposed on TradingRuntime (not injected into orchestrator -- orchestrator has no position_sizer param)
 - [Phase 09]: Transient metadata pattern: ohlcv_df/returns stripped before JSON persistence, restored after processing
+- [Phase 10]: Bootstrap try/except wraps post-event_notifier init only -- creation failure falls through
+- [Phase 10]: IndicatorSweeper _notify_results (summary) preserved alongside EventNotifier (per-candidate) -- role separation
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T04:54:13.877Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-12T06:07:16.583Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None

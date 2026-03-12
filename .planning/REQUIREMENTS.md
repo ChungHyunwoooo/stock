@@ -30,14 +30,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Monitoring & Alerts
 
-- [ ] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
+- [x] **MON-01**: 매매 체결/전략 상태 변화/시스템 이상/백테스트 결과를 실시간 Discord 알림으로 받을 수 있다
 - [x] **MON-02**: Discord /status 커맨드로 현재 포지션, 일일 PnL, 전략 상태를 즉시 조회할 수 있다
 - [x] **MON-03**: 웹 대시보드에서 실시간 포지션, 전략 성과, 시스템 상태, 전략 탐색 현황, 설정을 확인/변경할 수 있다
 - [x] **MON-04**: 단기 타임프레임 진입 신호를 상위 타임프레임 방향 확인으로 필터링할 수 있다 (MTF confirmation gate)
 
 ### Strategy Discovery
 
-- [ ] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
+- [x] **DISC-01**: indicator 조합을 자동 sweep하고 optuna 기반 Bayesian 파라미터 최적화로 후보 전략을 발굴할 수 있다
 - [x] **DISC-02**: ccxt 기반으로 Binance/Upbit 외 거래소(Bybit, OKX 등)의 데이터 수급 및 주문 실행을 지원한다
 
 ## v2 Requirements
@@ -79,11 +79,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | RISK-01 | Phase 9 | Complete |
 | RISK-02 | Phase 9 | Complete |
 | RISK-03 | Phase 4 | Complete |
-| MON-01 | Phase 10 | Pending |
+| MON-01 | Phase 10 | Complete |
 | MON-02 | Phase 6 | Complete |
 | MON-03 | Phase 8 | Complete |
 | MON-04 | Phase 6 | Complete |
-| DISC-01 | Phase 10 | Pending |
+| DISC-01 | Phase 10 | Complete |
 | DISC-02 | Phase 7 | Complete |
 
 **Coverage:**

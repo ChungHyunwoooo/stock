@@ -19,7 +19,7 @@
 - [ ] **Phase 7: Auto-Discovery** - Optuna 기반 Bayesian 파라미터 탐색 + ccxt 멀티거래소 확장
 - [ ] **Phase 8: Monitoring Dashboard** - Streamlit 대시보드로 전략 파이프라인 전체 가시화
 - [ ] **Phase 9: Production Wiring** - PositionSizer + PerformanceMonitor 프로덕션 배선 (gap closure)
-- [ ] **Phase 10: Event & Notification Wiring** - EventNotifier 4개 이벤트 + BacktestHistoryPlugin 활성화 (gap closure)
+- [x] **Phase 10: Event & Notification Wiring** - EventNotifier 4개 이벤트 + BacktestHistoryPlugin 활성화 (gap closure) (completed 2026-03-12)
 - [ ] **Phase 11: Cross-Phase Data Contracts** - PromotionGate 백테스트 비교 + CPCV sweep 통합 (gap closure)
 
 ## Phase Details
@@ -207,5 +207,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 7. Auto-Discovery | 0/2 | Not started | - |
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
 | 9. Production Wiring | 1/2 | In Progress|  |
-| 10. Event & Notification Wiring | 0/1 | Not started | - |
+| 10. Event & Notification Wiring | 1/1 | Complete   | 2026-03-12 |
 | 11. Cross-Phase Data Contracts | 0/1 | Not started | - |
