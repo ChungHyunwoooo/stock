@@ -27,7 +27,12 @@ except ImportError:
 from engine.core.database import init_db
 from engine.interfaces.dashboard.components.health_indicator import render_health
 from engine.interfaces.dashboard.data_service import DashboardDataService
-from engine.interfaces.dashboard.pages import lifecycle_view, portfolio_pnl
+from engine.interfaces.dashboard.pages import (
+    lifecycle_view,
+    portfolio_pnl,
+    settings_editor,
+    sweep_progress,
+)
 
 
 def _health_page() -> None:
@@ -53,6 +58,8 @@ def main() -> None:
         st.Page(lifecycle_view.render, title="Lifecycle", icon=":material/view_list:"),
         st.Page(portfolio_pnl.render, title="Portfolio PnL", icon=":material/show_chart:"),
         st.Page(_health_page, title="System Health", icon=":material/monitor_heart:"),
+        st.Page(sweep_progress.render, title="Sweep Queue", icon=":material/search:"),
+        st.Page(settings_editor.render, title="Settings", icon=":material/settings:"),
     ])
     pages.run()
 
