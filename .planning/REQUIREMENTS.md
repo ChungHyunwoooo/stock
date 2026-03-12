@@ -13,13 +13,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **BT-02**: Walk-forward OOS 검증으로 전략의 과적합을 방지할 수 있다 (다기간 IS/OOS 분할, IS-OOS 성과 갭 임계치 적용)
 - [x] **BT-03**: 전략이 2-3개 비상관 심볼에서 일관된 성과를 보이는지 검증할 수 있다 (중앙 Sharpe 기준 통과)
 - [x] **BT-04**: 백테스트 결과를 DB에 저장하고 전략별/날짜별 이력을 비교할 수 있다
-- [ ] **BT-05**: CPCV(Combinatorial Purged Cross-Validation)로 walk-forward를 고도화할 수 있다
+- [x] **BT-05**: CPCV(Combinatorial Purged Cross-Validation)로 walk-forward를 고도화할 수 있다
 
 ### Strategy Lifecycle
 
 - [x] **LIFE-01**: 전략 상태가 draft→testing→paper→active→archived 순서로만 전이되며, 규칙 위반 전이를 차단한다
 - [x] **LIFE-02**: 페이퍼 트레이딩 단계에서 PaperBroker 상태가 세션 간 영속되고 PnL이 추적된다
-- [ ] **LIFE-03**: Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준을 자동 검증하고, 미충족 시 승격을 차단한다
+- [x] **LIFE-03**: Paper→Live 승격 시 Sharpe/승률/기간/최대DD 기준을 자동 검증하고, 미충족 시 승격을 차단한다
 - [x] **LIFE-04**: 논문/커뮤니티의 레퍼런스 전략을 JSON StrategyDefinition으로 변환하는 구조화된 워크플로우가 있다
 
 ### Risk Management
@@ -71,10 +71,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | BT-02 | Phase 2 | Complete |
 | BT-03 | Phase 2 | Complete |
 | BT-04 | Phase 2 | Complete |
-| BT-05 | Phase 11 | Pending |
+| BT-05 | Phase 11 | Complete |
 | LIFE-01 | Phase 1 | Complete |
 | LIFE-02 | Phase 3 | Complete |
-| LIFE-03 | Phase 11 | Pending |
+| LIFE-03 | Phase 11 | Complete |
 | LIFE-04 | Phase 1 | Complete |
 | RISK-01 | Phase 9 | Complete |
 | RISK-02 | Phase 9 | Complete |

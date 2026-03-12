@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-12T06:10:29.647Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-12T06:23:54.908Z"
 last_activity: 2026-03-12 — Plan 10-01 complete (EventNotifier wired into bootstrap/BacktestRunner/IndicatorSweeper)
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
   percent: 96
 ---
 
@@ -67,6 +67,7 @@ Progress: [██████████] 96%
 | Phase 09 P02 | 3min | 2 tasks | 2 files |
 | Phase 09 P01 | 12min | 2 tasks | 9 files |
 | Phase 10 P01 | 4min | 2 tasks | 4 files |
+| Phase 11 P01 | 6min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Transient metadata pattern: ohlcv_df/returns stripped before JSON persistence, restored after processing
 - [Phase 10]: Bootstrap try/except wraps post-event_notifier init only -- creation failure falls through
 - [Phase 10]: IndicatorSweeper _notify_results (summary) preserved alongside EventNotifier (per-candidate) -- role separation
+- [Phase 11]: backtest_repo optional param (None default) -- zero impact on existing callers
+- [Phase 11]: CPCV ValueError returns -inf -- short equity curves silently pruned, same as WF failure
 
 ### Pending Todos
 
@@ -134,6 +137,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T06:07:16.583Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-12T06:23:54.905Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
