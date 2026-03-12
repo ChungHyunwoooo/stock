@@ -49,11 +49,12 @@ class TestBuildTradingRuntime:
         mock_broker_plugins.create.return_value = MagicMock()
 
         with (
-            patch("engine.interfaces.bootstrap.TradeRepository") as mock_trade_repo,
-            patch("engine.interfaces.bootstrap.BacktestRepository") as mock_bt_repo,
-            patch("engine.interfaces.bootstrap.LifecycleManager") as mock_lifecycle,
-            patch("engine.interfaces.bootstrap.RiskManager") as mock_risk_mgr,
-            patch("engine.interfaces.bootstrap.StrategyPerformanceMonitor") as mock_monitor_cls,
+            patch("engine.core.repository.TradeRepository") as mock_trade_repo,
+            patch("engine.core.repository.BacktestRepository") as mock_bt_repo,
+            patch("engine.strategy.lifecycle_manager.LifecycleManager") as mock_lifecycle,
+            patch("engine.strategy.risk_manager.RiskManager") as mock_risk_mgr,
+            patch("engine.strategy.performance_monitor.StrategyPerformanceMonitor") as mock_monitor_cls,
+            patch("engine.core.database.get_session") as mock_get_session,
         ):
             mock_monitor = MagicMock()
             mock_monitor_cls.return_value = mock_monitor
@@ -79,11 +80,12 @@ class TestBuildTradingRuntime:
         mock_broker_plugins.create.return_value = MagicMock()
 
         with (
-            patch("engine.interfaces.bootstrap.TradeRepository"),
-            patch("engine.interfaces.bootstrap.BacktestRepository"),
-            patch("engine.interfaces.bootstrap.LifecycleManager"),
-            patch("engine.interfaces.bootstrap.RiskManager"),
-            patch("engine.interfaces.bootstrap.StrategyPerformanceMonitor") as mock_monitor_cls,
+            patch("engine.core.repository.TradeRepository"),
+            patch("engine.core.repository.BacktestRepository"),
+            patch("engine.strategy.lifecycle_manager.LifecycleManager"),
+            patch("engine.strategy.risk_manager.RiskManager"),
+            patch("engine.strategy.performance_monitor.StrategyPerformanceMonitor") as mock_monitor_cls,
+            patch("engine.core.database.get_session"),
         ):
             mock_monitor = MagicMock()
             mock_monitor_cls.return_value = mock_monitor
