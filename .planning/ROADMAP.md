@@ -186,10 +186,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. PromotionGate.evaluate()가 BacktestRepository 기준 Sharpe와 비교하여 paper Sharpe가 낮으면 승격을 차단한다
   2. IndicatorSweeper._objective()에서 CPCV 모드를 선택하면 WalkForward 대신 CPCV 교차검증이 실행된다
-**Plans**: 0 plans
+**Plans**: 1 plans
 
 Plans:
-- (to be planned with `/gsd:plan-phase 11`)
+- [ ] 11-01-PLAN.md — PromotionGate backtest baseline Sharpe check + CPCV sweep validation mode
 
 ## Progress
 
@@ -208,4 +208,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
 | 9. Production Wiring | 1/2 | In Progress|  |
 | 10. Event & Notification Wiring | 0/1 | Not started | - |
-| 11. Cross-Phase Data Contracts | 0/0 | Not started | - |
+| 11. Cross-Phase Data Contracts | 0/1 | Not started | - |
