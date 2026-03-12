@@ -174,10 +174,9 @@ Plans:
   2. BacktestRunner.run() 완료 시 notify_backtest_complete가 호출된다
   3. IndicatorSweeper sweep 완료 시 notify_backtest_complete가 호출된다
   4. BacktestHistoryPlugin이 DEFAULT_COMMAND_PLUGINS에 등록되어 Discord 커맨드가 활성화된다
-**Plans**: 0 plans
+**Plans**: 1 plan
 
-Plans:
-- (to be planned with `/gsd:plan-phase 10`)
+- [ ] 10-01-PLAN.md — EventNotifier bootstrap wiring + BacktestRunner/IndicatorSweeper event_notifier injection
 
 ### Phase 11: Cross-Phase Data Contracts
 **Goal:** PromotionGate가 백테스트 기준값과 교차 비교하고, CPCV가 sweep 파이프라인에서 사용 가능하다
@@ -208,5 +207,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 7. Auto-Discovery | 0/2 | Not started | - |
 | 8. Monitoring Dashboard | 0/2 | Not started | - |
 | 9. Production Wiring | 1/2 | In Progress|  |
-| 10. Event & Notification Wiring | 0/0 | Not started | - |
+| 10. Event & Notification Wiring | 0/1 | Not started | - |
 | 11. Cross-Phase Data Contracts | 0/0 | Not started | - |
