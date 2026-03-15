@@ -40,15 +40,15 @@ def _read_bot_state() -> dict:
     return {"position": None, "cooldown_remaining": 0, "fr_history": [], "trade_log": []}
 
 
-def _fetch_candles(timeframe: str = "1h", limit: int = 200) -> list[dict]:
+def _fetch_candles(timeframe: str = "1h", limit: int = 200, symbol: str = "BTC/USDT") -> list[dict]:
     """바이낸스에서 캔들 + 지표 데이터."""
     import pandas as pd
     import talib
     end = pd.Timestamp.now(tz="UTC")
     tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
-    hours = tf_hours.get(timeframe, 1) * (limit + 60)  # 지표 계산용 여유
+    hours = tf_hours.get(timeframe, 1) * (limit + 60)
     start = end - pd.Timedelta(hours=hours)
-    df = _provider.fetch_ohlcv("BTC/USDT", str(start), str(end), timeframe)
+    df = _provider.fetch_ohlcv(symbol, str(start), str(end), timeframe)
 
     close = df["close"].values.astype(np.float64)
     ema20 = talib.EMA(close, timeperiod=20)
@@ -79,7 +79,7 @@ async def index():
 
 
 @app.get("/api/candles/{timeframe}")
-async def get_candles(timeframe: str = "1h", limit: int = 200, before: int | None = None):
+async def get_candles(timeframe: str = "1h", limit: int = 200, before: int | None = None, symbol: str = "BTC/USDT"):
     """캔들 조회. before=timestamp면 해당 시점 이전 데이터."""
     if before:
         import pandas as pd
@@ -87,7 +87,7 @@ async def get_candles(timeframe: str = "1h", limit: int = 200, before: int | Non
         tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
         hours = tf_hours.get(timeframe, 1) * (limit + 60)
         start = end - pd.Timedelta(hours=hours)
-        df = _provider.fetch_ohlcv("BTC/USDT", str(start), str(end), timeframe)
+        df = _provider.fetch_ohlcv(symbol, str(start), str(end), timeframe)
         import talib
         close = df["close"].values.astype(np.float64)
         ema20 = talib.EMA(close, timeperiod=20)
@@ -104,7 +104,7 @@ async def get_candles(timeframe: str = "1h", limit: int = 200, before: int | Non
                 "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
             })
         return candles[-limit:]
-    return _fetch_candles(timeframe, limit)
+    return _fetch_candles(timeframe, limit, symbol)
 
 
 @app.get("/api/state")
@@ -262,8 +262,22 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
 <body>
 
 <div class="header">
-    <div style="display:flex;align-items:center;">
-        <span class="symbol">BTC/USDT</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <select id="symbol-select" style="background:#2b3139;color:#f0b90b;border:1px solid #2b3139;padding:4px 8px;font-size:16px;font-weight:700;border-radius:4px;cursor:pointer;">
+            <option value="BTC/USDT">BTC/USDT</option>
+            <option value="ETH/USDT">ETH/USDT</option>
+            <option value="SOL/USDT">SOL/USDT</option>
+            <option value="SUI/USDT">SUI/USDT</option>
+            <option value="ADA/USDT">ADA/USDT</option>
+            <option value="LINK/USDT">LINK/USDT</option>
+            <option value="AVAX/USDT">AVAX/USDT</option>
+            <option value="XRP/USDT">XRP/USDT</option>
+            <option value="DOGE/USDT">DOGE/USDT</option>
+            <option value="BANANAS31/USDT">BANANAS31/USDT</option>
+            <option value="VIRTUAL/USDT">VIRTUAL/USDT</option>
+            <option value="RONIN/USDT">RONIN/USDT</option>
+            <option value="LQTY/USDT">LQTY/USDT</option>
+        </select>
         <span class="price up" id="hdr-price">--</span>
     </div>
     <div class="info">
@@ -385,9 +399,10 @@ let slPriceLine = null;
 
 let allCandles = [];
 let loadingMore = false;
+let currentSymbol = 'BTC/USDT';
 
 async function loadCandles(tf) {
-    const res = await fetch('/api/candles/' + tf + '?limit=500');
+    const res = await fetch('/api/candles/' + tf + '?limit=500&symbol=' + encodeURIComponent(currentSymbol));
     const data = await res.json();
     allCandles = data;
     renderCandles(data);
@@ -416,7 +431,7 @@ chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
         loadingMore = true;
         const oldest = allCandles[0].time;
         try {
-            const res = await fetch('/api/candles/' + currentTF + '?limit=500&before=' + oldest);
+            const res = await fetch('/api/candles/' + currentTF + '?limit=500&before=' + oldest + '&symbol=' + encodeURIComponent(currentSymbol));
             const older = await res.json();
             if(older.length > 0) {
                 const filtered = older.filter(c => c.time < oldest);
@@ -709,7 +724,7 @@ async function loadAltState() {
             document.getElementById('alt-status').innerHTML = '<span class="status-dot red"></span>' + s.position_count + '개 보유';
             let posHtml = '';
             s.positions.forEach(p => {
-                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;">' +
+                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;cursor:pointer;" onclick="switchToSymbol(\'' + p.symbol + '\')">' +
                     '<span style="color:#f0b90b;">' + p.symbol + '</span> ' +
                     '<span style="color:#0ecb81;">LONG</span> ' +
                     '@' + p.entry_price.toFixed(4) + ' ' +
@@ -731,6 +746,23 @@ async function loadAltState() {
                 '<td>' + t.reason + '</td></tr>';
         });
     } catch(e) {}
+}
+
+// 심볼 선택
+document.getElementById('symbol-select').addEventListener('change', (e) => {
+    currentSymbol = e.target.value;
+    allCandles = [];
+    loadCandles(currentTF);
+    connectWS(currentTF);
+});
+
+// 알트 포지션 클릭 → 해당 차트로 전환
+function switchToSymbol(sym) {
+    currentSymbol = sym;
+    document.getElementById('symbol-select').value = sym;
+    allCandles = [];
+    loadCandles(currentTF);
+    connectWS(currentTF);
 }
 
 // Init
