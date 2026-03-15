@@ -833,7 +833,7 @@ async function loadAltState() {
             document.getElementById('alt-status').innerHTML = '<span class="status-dot red"></span>' + s.position_count + '개 보유';
             let posHtml = '';
             s.positions.forEach(p => {
-                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;cursor:pointer;" onclick="switchToSymbol(' + JSON.stringify(p.symbol) + ')">' +
+                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;cursor:pointer;" data-sym="' + p.symbol + '" class="alt-pos-row">' +
                     '<span style="color:#f0b90b;">' + p.symbol + '</span> ' +
                     '<span style="color:#0ecb81;">LONG</span> ' +
                     '@' + p.entry_price.toFixed(4) + ' ' +
@@ -918,7 +918,7 @@ function renderHistory() {
         const exit = typeof t.exit === 'number' ? t.exit.toFixed(t.exit>1000?0:4) : t.exit;
         const entryTs = t.entry_time ? Math.floor(new Date(t.entry_time).getTime()/1000) : 0;
         const exitTs = t.exit_time ? Math.floor(new Date(t.exit_time).getTime()/1000) : 0;
-        tbody.innerHTML += '<tr style="cursor:pointer;" onclick="jumpToTrade(' + JSON.stringify(t.symbol) + ',' + entryTs + ',' + exitTs + ',' + JSON.stringify(t.side) + ',' + t.pnl + ')">' +
+        tbody.innerHTML += '<tr style="cursor:pointer;" data-sym="' + t.symbol + '" data-entry="' + entryTs + '" data-exit="' + exitTs + '" data-side="' + t.side + '" data-pnl="' + t.pnl + '">' +
             '<td style="color:#848e9c;">' + time + '</td>' +
             '<td>' + botTag + '</td>' +
             '<td>' + sym + '</td>' +
@@ -930,6 +930,20 @@ function renderHistory() {
             '<td style="color:#848e9c;">' + t.reason + '</td></tr>';
     });
 }
+
+// 히스토리 테이블 클릭 이벤트 위임
+document.getElementById('history-tbody').addEventListener('click', function(e) {
+    var tr = e.target.closest('tr');
+    if(!tr || !tr.dataset.sym) return;
+    jumpToTrade(tr.dataset.sym, parseInt(tr.dataset.entry), parseInt(tr.dataset.exit), tr.dataset.side, parseFloat(tr.dataset.pnl));
+});
+
+// 알트 포지션 클릭 이벤트 위임
+document.getElementById('alt-positions').addEventListener('click', function(e) {
+    var row = e.target.closest('[data-sym]');
+    if(!row) return;
+    switchToSymbol(row.dataset.sym);
+});
 
 // 심볼 선택
 document.getElementById('symbol-select').addEventListener('change', (e) => {
@@ -958,12 +972,11 @@ function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
             sel.appendChild(opt);
         }
 
-        // 해당 시점 포함하는 캔들을 before 기준으로 로드
-        const fetchEnd = (exitTs || entryTs) + 50*3600;
+        // 캔들 로드 (기본 최근 500봉)
         currentSymbol = sym;
         sel.value = sym;
 
-        fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym) + '&before=' + fetchEnd)
+        fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym))
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if(!data || !data.length) return;
