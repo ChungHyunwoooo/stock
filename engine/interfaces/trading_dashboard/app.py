@@ -981,6 +981,16 @@ function switchToSymbol(sym) {
     sel.value = sym;
     allCandles = [];
 
+    // 이전 데이터 즉시 클리어
+    candleSeries.setData([]);
+    ema20Series.setData([]);
+    ema50Series.setData([]);
+    volumeSeries.setData([]);
+    rsiSeries.setData([]);
+    rsi70.setData([]);
+    rsi30.setData([]);
+    candleSeries.setMarkers([]);
+
     fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym))
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -1005,9 +1015,11 @@ function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
             sel.appendChild(opt);
         }
 
-        // 캔들 로드 (기본 최근 500봉)
+        // 캔들 로드
         currentSymbol = sym;
         sel.value = sym;
+        candleSeries.setData([]); ema20Series.setData([]); ema50Series.setData([]);
+        volumeSeries.setData([]); rsiSeries.setData([]); candleSeries.setMarkers([]);
 
         fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym))
         .then(function(r) { return r.json(); })
