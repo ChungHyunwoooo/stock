@@ -950,71 +950,65 @@ function switchToSymbol(sym) {
 
 function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
     try {
-        // 심볼 전환 필요하면
-        if(sym !== currentSymbol) {
-            // 드롭다운에 없으면 추가
-            const sel = document.getElementById('symbol-select');
-            if(!Array.from(sel.options).some(o => o.value === sym)) {
-                const opt = document.createElement('option');
-                opt.value = sym; opt.textContent = sym.replace('/USDT','');
-                sel.appendChild(opt);
+        // 드롭다운에 없으면 추가
+        const sel = document.getElementById('symbol-select');
+        if(!Array.from(sel.options).some(o => o.value === sym)) {
+            const opt = document.createElement('option');
+            opt.value = sym; opt.textContent = sym.replace('/USDT','');
+            sel.appendChild(opt);
+        }
+
+        // 해당 시점 포함하는 캔들을 before 기준으로 로드
+        const fetchEnd = (exitTs || entryTs) + 50*3600;
+        currentSymbol = sym;
+        sel.value = sym;
+
+        fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym) + '&before=' + fetchEnd)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if(!data || !data.length) return;
+            allCandles = data;
+            renderCandles(data);
+
+            // B/S 마커
+            var isWin = pnl > 0;
+            var markers = [];
+            if(entryTs > 0) {
+                markers.push({
+                    time: entryTs,
+                    position: side==='LONG' ? 'belowBar' : 'aboveBar',
+                    color: '#f0b90b',
+                    shape: side==='LONG' ? 'arrowUp' : 'arrowDown',
+                    text: (side==='LONG'?'B':'S'),
+                    size: 2,
+                });
             }
-            currentSymbol = sym;
-            sel.value = sym;
-            allCandles = [];
+            if(exitTs > 0) {
+                markers.push({
+                    time: exitTs,
+                    position: side==='LONG' ? 'aboveBar' : 'belowBar',
+                    color: isWin ? '#0ecb81' : '#f6465d',
+                    shape: 'circle',
+                    text: (pnl>0?'+':'') + pnl + '%',
+                    size: 2,
+                });
+            }
+            if(markers.length) {
+                markers.sort(function(a,b) { return a.time - b.time; });
+                candleSeries.setMarkers(markers);
+            }
 
-            // 캔들 로드 후 마커 + 스크롤
-            fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym))
-            .then(r => r.json())
-            .then(data => {
-                allCandles = data;
-                renderCandles(data);
-                showTradeOnChart(entryTs, exitTs, side, pnl);
-            });
-            connectWS(currentTF);
-        } else {
-            showTradeOnChart(entryTs, exitTs, side, pnl);
-        }
+            // 스크롤: 캔들 데이터 범위 내에서만
+            var from = entryTs - 20*3600;
+            var to = (exitTs || entryTs) + 20*3600;
+            var first = data[0].time;
+            var last = data[data.length-1].time;
+            if(from < first) from = first;
+            if(to > last) to = last;
+            chart.timeScale().setVisibleRange({from: from, to: to});
+        })
+        .catch(function(e) { console.error('jumpToTrade fetch error:', e); });
     } catch(e) { console.error('jumpToTrade error:', e); }
-}
-
-function showTradeOnChart(entryTs, exitTs, side, pnl) {
-    try {
-        // 해당 시점으로 스크롤
-        const padding = 20 * 3600;
-        chart.timeScale().setVisibleRange({
-            from: entryTs - padding,
-            to: (exitTs || entryTs) + padding,
-        });
-
-        // B/S 마커
-        const isWin = pnl > 0;
-        const markers = [];
-        if(entryTs > 0) {
-            markers.push({
-                time: entryTs,
-                position: side==='LONG' ? 'belowBar' : 'aboveBar',
-                color: '#f0b90b',
-                shape: side==='LONG' ? 'arrowUp' : 'arrowDown',
-                text: (side==='LONG'?'B':'S') + ' ▶',
-                size: 2,
-            });
-        }
-        if(exitTs > 0) {
-            markers.push({
-                time: exitTs,
-                position: side==='LONG' ? 'aboveBar' : 'belowBar',
-                color: isWin ? '#0ecb81' : '#f6465d',
-                shape: 'circle',
-                text: (isWin?'✓':'✗') + ' ' + (pnl>0?'+':'') + pnl + '%',
-                size: 2,
-            });
-        }
-        if(markers.length) {
-            markers.sort((a,b) => a.time - b.time);
-            candleSeries.setMarkers(markers);
-        }
-    } catch(e) { console.error('showTradeOnChart error:', e); }
 }
 
 // 심볼 목록 자동 로드
