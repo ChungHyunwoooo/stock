@@ -684,9 +684,12 @@ function updatePositionLines(pos) {
     });
 }
 
+var wsTimer = null;
 function connectWS(tf) {
-    if(ws) ws.close();
-    ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf+'?symbol='+encodeURIComponent(currentSymbol));
+    if(ws) { try{ws.close();}catch(e){} ws=null; }
+    if(wsTimer) clearTimeout(wsTimer);
+    wsTimer = setTimeout(function() {
+        ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf+'?symbol='+encodeURIComponent(currentSymbol));
     ws.onmessage = (e) => {
         try {
             const msg = JSON.parse(e.data);
@@ -699,8 +702,9 @@ function connectWS(tf) {
             if(msg.type==='state') updateState(msg.data);
         } catch(err) {}
     };
-    ws.onerror = () => {};
-    ws.onclose = () => { setTimeout(() => connectWS(tf), 5000); };
+    ws.onerror = function(){};
+    ws.onclose = function(){ setTimeout(function(){connectWS(tf);}, 5000); };
+    }, 300);
 }
 
 async function loadState() {
