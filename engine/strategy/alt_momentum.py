@@ -37,11 +37,20 @@ VALIDATED_SYMBOLS = [
 ]
 
 
+def _load_symbols() -> list[str]:
+    """validated_symbols.json 있으면 사용, 없으면 하드코딩 기본값."""
+    try:
+        from engine.strategy.symbol_scanner import load_validated_symbols
+        return load_validated_symbols()
+    except Exception:
+        return VALIDATED_SYMBOLS.copy()
+
+
 @dataclass
 class AltMomentumConfig(BaseBotConfig):
     """알트 데일리 봇 설정."""
     bot_name: str = "알트_데일리_봇"
-    symbols: list[str] = field(default_factory=lambda: VALIDATED_SYMBOLS.copy())
+    symbols: list[str] = field(default_factory=_load_symbols)
     pump_threshold: float = 2.0
     vol_multiplier: float = 2.0
     tp_pct: float = 5.0
