@@ -229,7 +229,6 @@ function fmtPrice(p) {
 }
 
 let currentTF = '1h';
-let ws = null;
 let entryPriceLine = null;
 let slPriceLine = null;
 
@@ -431,34 +430,26 @@ function updatePositionLines(pos) {
     });
 }
 
-var wsTimer = null;
-var wsConnecting = false;
+// Polling 기반 실시간 업데이트 (WS 대신 — 안정적)
+var pollTimer = null;
 function connectWS(tf) {
-    if(wsTimer) { clearTimeout(wsTimer); wsTimer=null; }
-    if(ws) {
-        try { ws.onclose=null; ws.onerror=null; ws.close(); } catch(e) {}
-        ws=null;
-    }
-    wsTimer = setTimeout(function() {
-        if(wsConnecting) return;
-        wsConnecting = true;
-        ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf+'?symbol='+encodeURIComponent(currentSymbol));
+    // WS 대신 polling 사용
+    if(pollTimer) clearInterval(pollTimer);
+    var intervals = {'1m':10,'5m':30,'15m':60,'1h':60,'4h':120,'1d':300};
+    var sec = (intervals[tf] || 60) * 1000;
+    pollTimer = setInterval(function() {
+        fetch('/api/candles/'+tf+'?limit=2&symbol='+encodeURIComponent(currentSymbol))
+        .then(function(r){return r.json();})
+        .then(function(data){
+            if(!data || !data.length) return;
+            var c = data[data.length-1];
+            candleSeries.update({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close});
+            volumeSeries.update({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'});
+            document.getElementById('hdr-price').textContent = fmtPrice(c.close);
+        }).catch(function(){});
+    }, sec);
     ws.onmessage = (e) => {
-        try {
-            const msg = JSON.parse(e.data);
-            if(msg.type==='candle') {
-                const c = msg.data;
-                candleSeries.update({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close});
-                volumeSeries.update({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'});
-                document.getElementById('hdr-price').textContent = fmtPrice(c.close);
-            }
-            if(msg.type==='state') updateState(msg.data);
-        } catch(err) {}
-    };
-    ws.onopen = function(){ wsConnecting=false; };
-    ws.onerror = function(){ wsConnecting=false; };
-    ws.onclose = function(){ wsConnecting=false; setTimeout(function(){connectWS(tf);}, 5000); };
-    }, 500);
+}
 }
 
 async function loadState() {
