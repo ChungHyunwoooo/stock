@@ -178,7 +178,7 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
     <table class="trade-table" style="font-size:12px;">
         <thead><tr>
             <th>시간</th><th>봇</th><th>심볼</th><th>방향</th>
-            <th>진입</th><th>청산</th><th>PnL</th><th>보유</th><th>사유</th>
+            <th>진입</th><th>청산</th><th>PnL</th><th>보유</th><th>사유</th><th>진입이유</th>
         </tr></thead>
         <tbody id="history-tbody"></tbody>
     </table>
@@ -687,7 +687,8 @@ function renderHistory() {
             '<td>' + exit + '</td>' +
             '<td class="' + cls + '">' + (t.pnl>0?'+':'') + t.pnl + '%</td>' +
             '<td style="color:#848e9c;">' + t.bars + 'h</td>' +
-            '<td style="color:#848e9c;">' + t.reason + '</td></tr>';
+            '<td style="color:#848e9c;">' + t.reason + '</td>' +
+            '<td style="color:#f0b90b;">' + (t.entry_reason||'') + '</td></tr>';
     });
 }
 

@@ -131,9 +131,13 @@ def get_symbols() -> list[str]:
         from engine.data.provider_crypto import _build_futures_exchange
         ex = _build_futures_exchange("binance")
         markets = ex.load_markets()
+        # 인덱스 토큰 제외 (BTCDOM, DEFIUSDT 등 거래 불가)
+        excluded_keywords = {"DOM", "DEFI"}
         for s, m in markets.items():
             if m.get("swap") and m.get("quote") == "USDT" and m.get("active"):
-                syms.add(s.replace(":USDT", ""))
+                base = s.replace(":USDT", "").replace("/USDT", "")
+                if not any(kw in base for kw in excluded_keywords):
+                    syms.add(s.replace(":USDT", ""))
     except Exception:
         pass
     # fallback: 최소 기본 종목
@@ -168,6 +172,7 @@ def get_history() -> dict:
             "reason": t.get("reason", ""),
             "entry_time": t.get("entry_time", ""),
             "exit_time": t.get("exit_time", ""),
+            "entry_reason": t.get("extra", {}).get("reason", "") if isinstance(t.get("extra"), dict) else "",
         })
 
     alt_data = read_alt_state()
@@ -183,6 +188,7 @@ def get_history() -> dict:
             "reason": t.get("reason", ""),
             "entry_time": t.get("entry_time", ""),
             "exit_time": t.get("exit_time", ""),
+            "entry_reason": t.get("extra", {}).get("reason", "") if isinstance(t.get("extra"), dict) else "",
         })
 
     trades.sort(key=lambda x: x.get("exit_time", ""), reverse=True)

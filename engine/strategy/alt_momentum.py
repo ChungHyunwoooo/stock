@@ -16,6 +16,7 @@ import pandas as pd
 
 from engine.data.provider_crypto import CryptoProvider
 from engine.strategy.base_bot import BaseBot, BaseBotConfig, BasePosition, TradeRecord
+from engine.strategy.symbol_health import SymbolHealthMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +70,10 @@ class AltMomentumBot(BaseBot):
         super().__init__(self.cfg)
         self.positions: dict[str, BasePosition] = {}
         self._provider = CryptoProvider(self.cfg.exchange)
+        self.health = SymbolHealthMonitor()
 
     def on_init(self) -> None:
-        pass  # 초기화 불필요 (펀딩비 부트스트랩 없음)
+        pass
 
     def _fetch_latest(self, symbol: str) -> dict | None:
         try:
@@ -125,7 +127,9 @@ class AltMomentumBot(BaseBot):
                     pnl_pct=round(pnl, 3), bars_held=pos.bars_held,
                     reason=reason, entry_time=pos.entry_time,
                     exit_time=datetime.now(timezone.utc).isoformat(),
+                    extra=pos.extra,
                 ))
+                self.health.record_trade(sym, pnl)
                 closed.append(sym)
             else:
                 pos.tick()
@@ -144,8 +148,10 @@ class AltMomentumBot(BaseBot):
             if data is None:
                 continue
 
-            if self._check_pump(data):
+            if self._check_pump(data) and self.health.is_healthy(sym):
                 entry = data["close"]
+                ret_1h = (data["close"] - data["prev_close"]) / data["prev_close"] * 100
+                vol_ratio = data["volume"] / (np.mean(data["vol_history"]) or 1)
                 now = datetime.now(timezone.utc).isoformat()
                 self.positions[sym] = BasePosition(
                     symbol=sym, side="LONG",
@@ -154,6 +160,7 @@ class AltMomentumBot(BaseBot):
                     take_profit=round(entry * (1 + cfg.tp_pct / 100), 10),
                     max_hold_hours=cfg.hold_hours,
                     entry_time=now,
+                    extra={"reason": f"+{ret_1h:.1f}% vol:{vol_ratio:.1f}x"},
                 )
                 self._alert_entry(sym, "LONG", entry,
                     TP=f"{entry * (1 + cfg.tp_pct / 100):.10g}",
