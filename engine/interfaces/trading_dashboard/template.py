@@ -734,7 +734,6 @@ function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
         // 캔들 로드
         currentSymbol = sym;
         document.getElementById('symbol-search').value = sym.replace('/USDT','');
-        sel.value = sym;
         candleSeries.setData([]); ema20Series.setData([]); ema50Series.setData([]);
         volumeSeries.setData([]); rsiSeries.setData([]); candleSeries.setMarkers([]);
 
