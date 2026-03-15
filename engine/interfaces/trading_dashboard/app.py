@@ -132,6 +132,29 @@ async def get_state():
     }
 
 
+@app.get("/api/symbols")
+async def get_symbols():
+    """거래 가능한 심볼 목록 (기본 + 알트봇 종목 + 거래이력 종목)."""
+    syms = {"BTC/USDT"}
+    # 알트봇 설정 종목
+    try:
+        from engine.strategy.alt_momentum import VALIDATED_SYMBOLS
+        syms.update(VALIDATED_SYMBOLS)
+    except Exception:
+        pass
+    # 거래이력 종목
+    if ALT_STATE_FILE.exists():
+        try:
+            data = json.loads(ALT_STATE_FILE.read_text())
+            for t in data.get("trade_log", []):
+                if t.get("symbol"): syms.add(t["symbol"])
+            for p in data.get("positions", []):
+                if p.get("symbol"): syms.add(p["symbol"])
+        except Exception:
+            pass
+    return sorted(syms)
+
+
 @app.get("/api/alt_state")
 async def get_alt_state():
     """알트_데일리_봇 상태."""
@@ -328,18 +351,6 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
     <div style="display:flex;align-items:center;gap:8px;">
         <select id="symbol-select" style="background:#2b3139;color:#f0b90b;border:1px solid #2b3139;padding:4px 8px;font-size:16px;font-weight:700;border-radius:4px;cursor:pointer;">
             <option value="BTC/USDT">BTC/USDT</option>
-            <option value="ETH/USDT">ETH/USDT</option>
-            <option value="SOL/USDT">SOL/USDT</option>
-            <option value="SUI/USDT">SUI/USDT</option>
-            <option value="ADA/USDT">ADA/USDT</option>
-            <option value="LINK/USDT">LINK/USDT</option>
-            <option value="AVAX/USDT">AVAX/USDT</option>
-            <option value="XRP/USDT">XRP/USDT</option>
-            <option value="DOGE/USDT">DOGE/USDT</option>
-            <option value="BANANAS31/USDT">BANANAS31/USDT</option>
-            <option value="VIRTUAL/USDT">VIRTUAL/USDT</option>
-            <option value="RONIN/USDT">RONIN/USDT</option>
-            <option value="LQTY/USDT">LQTY/USDT</option>
         </select>
         <span class="price up" id="hdr-price">--</span>
     </div>
@@ -975,7 +986,37 @@ async function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
     candleSeries.setMarkers(markers);
 }
 
+// 심볼 목록 자동 로드
+async function loadSymbols() {
+    try {
+        const res = await fetch('/api/symbols');
+        const syms = await res.json();
+        const sel = document.getElementById('symbol-select');
+        const current = sel.value;
+        sel.innerHTML = '';
+        syms.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s; opt.textContent = s.replace('/USDT','');
+            sel.appendChild(opt);
+        });
+        sel.value = current || 'BTC/USDT';
+    } catch(e) {}
+}
+
+// switchToSymbol: 드롭다운에 없는 심볼도 동적 추가
+const origSwitch = switchToSymbol;
+switchToSymbol = function(sym) {
+    const sel = document.getElementById('symbol-select');
+    if(!Array.from(sel.options).some(o => o.value === sym)) {
+        const opt = document.createElement('option');
+        opt.value = sym; opt.textContent = sym.replace('/USDT','');
+        sel.appendChild(opt);
+    }
+    origSwitch(sym);
+};
+
 // Init
+loadSymbols();
 loadCandles(currentTF);
 connectWS(currentTF);
 loadState();
