@@ -336,6 +336,13 @@ class FundingContrarianBot:
         logger.info("진입: %s %s @ %.2f (SL=%.2f, z=%.2f) [%s]",
                     signal.side, signal.symbol, signal.entry_price,
                     signal.stop_loss, signal.fr_zscore, self.config.mode)
+        try:
+            from engine.notifications.bot_alert import alert_entry
+            alert_entry("BTC_선물_봇", signal.symbol, signal.side, signal.entry_price,
+                       SL=f"${signal.stop_loss:,.2f}", FR_z=signal.fr_zscore,
+                       레버리지=f"{self.config.leverage}x")
+        except Exception:
+            pass
 
     def _execute_exit(self, exit_price: float, reason: str) -> None:
         """청산 실행."""
@@ -369,6 +376,14 @@ class FundingContrarianBot:
                     self.position.entry_price, exit_price,
                     pnl_pct, self.config.leverage, pnl_pct_leveraged,
                     reason, self.position.bars_held)
+        try:
+            from engine.notifications.bot_alert import alert_exit
+            alert_exit("BTC_선물_봇", self.position.symbol, self.position.side,
+                      self.position.entry_price, exit_price, pnl_pct_leveraged,
+                      reason, 보유=f"{self.position.bars_held}h",
+                      레버리지=f"{self.config.leverage}x")
+        except Exception:
+            pass
 
         self.position = None
 

@@ -197,6 +197,12 @@ class AltMomentumBot:
                 })
                 logger.info("청산: %s %.2f→%.2f (%+.2f%%) %s",
                            sym, pos.entry_price, exit_price, pnl_pct, reason)
+                try:
+                    from engine.notifications.bot_alert import alert_exit
+                    alert_exit("알트_데일리_봇", sym, "LONG",
+                              pos.entry_price, exit_price, pnl_pct, reason)
+                except Exception:
+                    pass
                 closed_symbols.append(sym)
             else:
                 pos.tick()
@@ -232,6 +238,12 @@ class AltMomentumBot:
                 self.positions[sym] = pos
                 logger.info("진입: %s LONG @ %.6f (TP=%.6f SL=%.6f)",
                            sym, entry_price, pos.tp_price, pos.sl_price)
+                try:
+                    from engine.notifications.bot_alert import alert_entry
+                    alert_entry("알트_데일리_봇", sym, "LONG", entry_price,
+                               TP=f"{pos.tp_price:.6f}", SL=f"{pos.sl_price:.6f}")
+                except Exception:
+                    pass
 
             time.sleep(0.1)  # API rate limit
 
