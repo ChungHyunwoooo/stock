@@ -448,8 +448,6 @@ function connectWS(tf) {
             document.getElementById('hdr-price').textContent = fmtPrice(c.close);
         }).catch(function(){});
     }, sec);
-    ws.onmessage = (e) => {
-}
 }
 
 async function loadState() {
