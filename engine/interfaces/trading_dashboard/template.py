@@ -806,6 +806,7 @@ function hideSymbolDropdown() {
 }
 
 function filterSymbols() {
+    ddSelectedIdx = -1;
     var query = document.getElementById('symbol-search').value.toUpperCase();
     var dd = document.getElementById('symbol-dropdown');
     var filtered = allSymbols.filter(function(s){ return s.replace('/USDT','').indexOf(query) >= 0; });
@@ -826,12 +827,34 @@ function filterSymbols() {
 }
 
 document.getElementById('symbol-search').addEventListener('blur', hideSymbolDropdown);
+var ddSelectedIdx = -1;
 document.getElementById('symbol-search').addEventListener('keydown', function(e) {
-    if(e.key === 'Enter') {
-        var query = this.value.toUpperCase();
-        var match = allSymbols.find(function(s){ return s.replace('/USDT','') === query; });
-        if(match) { switchToSymbol(match); this.value = match.replace('/USDT',''); }
-        document.getElementById('symbol-dropdown').style.display = 'none';
+    var dd = document.getElementById('symbol-dropdown');
+    var items = dd.querySelectorAll('div');
+    if(e.key === 'ArrowDown') {
+        e.preventDefault();
+        ddSelectedIdx = Math.min(ddSelectedIdx + 1, items.length - 1);
+        items.forEach(function(el,i){ el.style.background = i===ddSelectedIdx ? '#2b3139' : 'transparent'; });
+        if(items[ddSelectedIdx]) items[ddSelectedIdx].scrollIntoView({block:'nearest'});
+    } else if(e.key === 'ArrowUp') {
+        e.preventDefault();
+        ddSelectedIdx = Math.max(ddSelectedIdx - 1, 0);
+        items.forEach(function(el,i){ el.style.background = i===ddSelectedIdx ? '#2b3139' : 'transparent'; });
+        if(items[ddSelectedIdx]) items[ddSelectedIdx].scrollIntoView({block:'nearest'});
+    } else if(e.key === 'Enter') {
+        e.preventDefault();
+        if(ddSelectedIdx >= 0 && items[ddSelectedIdx]) {
+            items[ddSelectedIdx].click();
+        } else {
+            var query = this.value.toUpperCase();
+            var match = allSymbols.find(function(s){ return s.replace('/USDT','') === query; });
+            if(match) { switchToSymbol(match); this.value = match.replace('/USDT',''); }
+        }
+        dd.style.display = 'none';
+        ddSelectedIdx = -1;
+    } else if(e.key === 'Escape') {
+        dd.style.display = 'none';
+        ddSelectedIdx = -1;
     }
 });
 
