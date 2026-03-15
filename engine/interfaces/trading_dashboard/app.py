@@ -245,12 +245,12 @@ async def get_history():
 
 
 @app.websocket("/ws/candles/{timeframe}")
-async def ws_candles(websocket: WebSocket, timeframe: str = "1h"):
+async def ws_candles(websocket: WebSocket, timeframe: str = "1h", symbol: str = "BTC/USDT"):
     """실시간 캔들 스트리밍."""
     await websocket.accept()
     try:
         while True:
-            candles = _fetch_candles(timeframe, 2)
+            candles = _fetch_candles(timeframe, 2, symbol)
             if candles:
                 await websocket.send_json({"type": "candle", "data": candles[-1]})
             state = _read_bot_state()
@@ -519,7 +519,10 @@ function renderCandles(data) {
     rsiSeries.setData(rsiData);
     rsi70.setData(rsiData.map(c=>({time:c.time,value:70})));
     rsi30.setData(rsiData.map(c=>({time:c.time,value:30})));
-    if(data.length) document.getElementById('hdr-price').textContent = '$' + data[data.length-1].close.toLocaleString();
+    if(data.length) {
+        document.getElementById('hdr-price').textContent = '$' + data[data.length-1].close.toLocaleString();
+        document.getElementById('hdr-price').className = 'price ' + (data[data.length-1].close >= data[data.length-1].open ? 'up' : 'down');
+    }
 }
 
 // 스크롤 시 과거 봉 자동 로드 (디바운스)
@@ -683,7 +686,7 @@ function updatePositionLines(pos) {
 
 function connectWS(tf) {
     if(ws) ws.close();
-    ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf);
+    ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf+'?symbol='+encodeURIComponent(currentSymbol));
     ws.onmessage = (e) => {
         try {
             const msg = JSON.parse(e.data);
