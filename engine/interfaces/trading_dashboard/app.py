@@ -277,6 +277,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>₿</text></svg>">
 <title>BTC_선물_봇 Dashboard</title>
 <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 <style>
@@ -684,16 +685,19 @@ function connectWS(tf) {
     if(ws) ws.close();
     ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf);
     ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        if(msg.type==='candle') {
-            const c = msg.data;
-            candleSeries.update({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close});
-            volumeSeries.update({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'});
-            const priceEl = document.getElementById('hdr-price');
-            priceEl.textContent = '$' + c.close.toLocaleString();
-        }
-        if(msg.type==='state') updateState(msg.data);
+        try {
+            const msg = JSON.parse(e.data);
+            if(msg.type==='candle') {
+                const c = msg.data;
+                candleSeries.update({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close});
+                volumeSeries.update({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'});
+                document.getElementById('hdr-price').textContent = '$' + c.close.toLocaleString();
+            }
+            if(msg.type==='state') updateState(msg.data);
+        } catch(err) {}
     };
+    ws.onerror = () => {};
+    ws.onclose = () => { setTimeout(() => connectWS(tf), 5000); };
 }
 
 async function loadState() {
