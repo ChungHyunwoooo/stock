@@ -247,6 +247,15 @@ async function loadCandles(tf) {
 }
 
 function renderCandles(data) {
+    // 가격 범위에 맞는 소수점 자릿수 계산
+    if(data.length > 0) {
+        var p = data[data.length-1].close;
+        var dec = p >= 1000 ? 2 : p >= 1 ? 4 : p >= 0.001 ? 6 : 10;
+        var pf = {type:'price', precision:dec, minMove:Math.pow(10,-dec)};
+        candleSeries.applyOptions({priceFormat:pf});
+        ema20Series.applyOptions({priceFormat:pf});
+        ema50Series.applyOptions({priceFormat:pf});
+    }
     candleSeries.setData(data.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
     volumeSeries.setData(data.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'})));
     // EMA
