@@ -65,8 +65,8 @@ def _fetch_candles(timeframe: str = "1h", limit: int = 200, symbol: str = "BTC/U
             "low": float(row["low"]),
             "close": float(row["close"]),
             "volume": float(row["volume"]),
-            "ema20": round(float(ema20[i]), 2) if not np.isnan(ema20[i]) else None,
-            "ema50": round(float(ema50[i]), 2) if not np.isnan(ema50[i]) else None,
+            "ema20": float(ema20[i]) if not np.isnan(ema20[i]) else None,
+            "ema50": float(ema50[i]) if not np.isnan(ema50[i]) else None,
             "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
         })
     # limit만큼만 반환
