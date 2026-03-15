@@ -510,24 +510,28 @@ function renderCandles(data) {
     if(data.length) document.getElementById('hdr-price').textContent = '$' + data[data.length-1].close.toLocaleString();
 }
 
-// 스크롤 시 과거 봉 자동 로드
-chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
+// 스크롤 시 과거 봉 자동 로드 (디바운스)
+let scrollTimer = null;
+chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
     if(!range || loadingMore) return;
     if(range.from < 10 && allCandles.length > 0) {
-        loadingMore = true;
-        const oldest = allCandles[0].time;
-        try {
-            const res = await fetch('/api/candles/' + currentTF + '?limit=500&before=' + oldest + '&symbol=' + encodeURIComponent(currentSymbol));
-            const older = await res.json();
-            if(older.length > 0) {
-                const filtered = older.filter(c => c.time < oldest);
-                if(filtered.length > 0) {
-                    allCandles = [...filtered, ...allCandles];
-                    renderCandles(allCandles);
+        if(scrollTimer) clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(async () => {
+            loadingMore = true;
+            const oldest = allCandles[0].time;
+            try {
+                const res = await fetch('/api/candles/' + currentTF + '?limit=500&before=' + oldest + '&symbol=' + encodeURIComponent(currentSymbol));
+                const older = await res.json();
+                if(older.length > 0) {
+                    const filtered = older.filter(c => c.time < oldest);
+                    if(filtered.length > 0) {
+                        allCandles = [...filtered, ...allCandles];
+                        renderCandles(allCandles);
+                    }
                 }
-            }
-        } catch(e) {}
-        loadingMore = false;
+            } catch(e) {}
+            loadingMore = false;
+        }, 500);
     }
 });
 
@@ -784,9 +788,13 @@ new ResizeObserver(() => {
     rsiChart.applyOptions({width:rsiEl.clientWidth});
 }).observe(chartEl);
 
-// 메인↔RSI 시간축 동기화
-chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
-    if(range) rsiChart.timeScale().setVisibleRange(range);
+// 메인↔RSI 시간축 동기화 (무한루프 방지)
+let syncing = false;
+chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+    if(syncing || !range) return;
+    syncing = true;
+    rsiChart.timeScale().setVisibleLogicalRange(range);
+    syncing = false;
 });
 
 // 알트봇 상태 로드
@@ -810,7 +818,7 @@ async function loadAltState() {
             document.getElementById('alt-status').innerHTML = '<span class="status-dot red"></span>' + s.position_count + '개 보유';
             let posHtml = '';
             s.positions.forEach(p => {
-                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;cursor:pointer;" onclick="switchToSymbol(\'' + p.symbol + '\')">' +
+                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;cursor:pointer;" onclick="switchToSymbol(' + JSON.stringify(p.symbol) + ')">' +
                     '<span style="color:#f0b90b;">' + p.symbol + '</span> ' +
                     '<span style="color:#0ecb81;">LONG</span> ' +
                     '@' + p.entry_price.toFixed(4) + ' ' +
@@ -893,7 +901,9 @@ function renderHistory() {
         const sym = t.symbol.replace('/USDT','');
         const entry = typeof t.entry === 'number' ? t.entry.toFixed(t.entry>1000?0:4) : t.entry;
         const exit = typeof t.exit === 'number' ? t.exit.toFixed(t.exit>1000?0:4) : t.exit;
-        tbody.innerHTML += '<tr style="cursor:pointer;" onclick="switchToSymbol(\'' + t.symbol + '\')">' +
+        const entryTs = t.entry_time ? Math.floor(new Date(t.entry_time).getTime()/1000) : 0;
+        const exitTs = t.exit_time ? Math.floor(new Date(t.exit_time).getTime()/1000) : 0;
+        tbody.innerHTML += '<tr style="cursor:pointer;" onclick="jumpToTrade(' + JSON.stringify(t.symbol) + ',' + entryTs + ',' + exitTs + ',' + JSON.stringify(t.side) + ',' + t.pnl + ')">' +
             '<td style="color:#848e9c;">' + time + '</td>' +
             '<td>' + botTag + '</td>' +
             '<td>' + sym + '</td>' +
@@ -921,6 +931,48 @@ function switchToSymbol(sym) {
     allCandles = [];
     loadCandles(currentTF);
     connectWS(currentTF);
+}
+
+async function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
+    // 심볼 전환
+    if(sym !== currentSymbol) {
+        currentSymbol = sym;
+        document.getElementById('symbol-select').value = sym;
+        allCandles = [];
+        await loadCandles(currentTF);
+        connectWS(currentTF);
+    }
+
+    // 해당 시점으로 스크롤 (진입 전후 여유)
+    const padding = 20 * 3600; // 20봉 여유
+    chart.timeScale().setVisibleRange({
+        from: entryTs - padding,
+        to: (exitTs || entryTs) + padding,
+    });
+
+    // 해당 거래 마커 강조
+    const isWin = pnl > 0;
+    const markers = [];
+    markers.push({
+        time: entryTs,
+        position: side==='LONG' ? 'belowBar' : 'aboveBar',
+        color: '#f0b90b',
+        shape: side==='LONG' ? 'arrowUp' : 'arrowDown',
+        text: (side==='LONG'?'B':'S') + ' ▶',
+        size: 2,
+    });
+    if(exitTs) {
+        markers.push({
+            time: exitTs,
+            position: side==='LONG' ? 'aboveBar' : 'belowBar',
+            color: isWin ? '#0ecb81' : '#f6465d',
+            shape: 'circle',
+            text: (isWin?'✓':'✗') + ' ' + (pnl>0?'+':'') + pnl + '%',
+            size: 2,
+        });
+    }
+    markers.sort((a,b) => a.time - b.time);
+    candleSeries.setMarkers(markers);
 }
 
 // Init
