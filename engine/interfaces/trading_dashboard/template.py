@@ -249,6 +249,13 @@ async function loadCandles(tf) {
 }
 
 function renderCandles(data) {
+    if(!data || !data.length) {
+        candleSeries.setData([]); ema20Series.setData([]); ema50Series.setData([]);
+        volumeSeries.setData([]); rsiSeries.setData([]); rsi70.setData([]); rsi30.setData([]);
+        document.getElementById('hdr-price').textContent = '데이터 없음';
+        document.getElementById('hdr-price').className = 'price';
+        return;
+    }
     // 가격 범위에 맞는 소수점 자릿수 계산
     if(data.length > 0) {
         var p = data[data.length-1].close;
