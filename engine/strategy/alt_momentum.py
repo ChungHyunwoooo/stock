@@ -71,6 +71,7 @@ class AltMomentumBot(BaseBot):
         self.positions: dict[str, BasePosition] = {}
         self._provider = CryptoProvider(self.cfg.exchange)
         self.health = SymbolHealthMonitor()
+        self._recent_entries: dict[str, str] = {}  # symbol → 마지막 진입 봉 시간 (중복 진입 방지)
 
     def on_init(self) -> None:
         pass
@@ -84,6 +85,7 @@ class AltMomentumBot(BaseBot):
                 return None
             last = df.iloc[-1]
             prev = df.iloc[-2]
+            candle_time = str(df.index[-1])
             return {
                 "close": float(last["close"]),
                 "high": float(last["high"]),
@@ -91,6 +93,7 @@ class AltMomentumBot(BaseBot):
                 "volume": float(last["volume"]),
                 "prev_close": float(prev["close"]),
                 "vol_history": df["volume"].values[-self.cfg.vol_ma_period:].tolist(),
+                "candle_time": candle_time,
             }
         except Exception as e:
             logger.debug("데이터 조회 실패 %s: %s", symbol, e)
@@ -148,6 +151,10 @@ class AltMomentumBot(BaseBot):
             if data is None:
                 continue
 
+            # 같은 봉에서 이미 진입했으면 스킵
+            candle_key = sym + "_" + data.get("candle_time", "")
+            if candle_key == self._recent_entries.get(sym):
+                continue
             if self._check_pump(data) and self.health.is_healthy(sym):
                 entry = data["close"]
                 ret_1h = (data["close"] - data["prev_close"]) / data["prev_close"] * 100
@@ -162,6 +169,7 @@ class AltMomentumBot(BaseBot):
                     entry_time=now,
                     extra={"reason": f"+{ret_1h:.1f}% vol:{vol_ratio:.1f}x"},
                 )
+                self._recent_entries[sym] = candle_key
                 self._alert_entry(sym, "LONG", entry,
                     TP=f"{entry * (1 + cfg.tp_pct / 100):.10g}",
                     SL=f"{entry * (1 - cfg.sl_pct / 100):.10g}",
