@@ -25,6 +25,7 @@ app = FastAPI(title="BTC_선물_봇 Dashboard")
 
 ROOT = Path(__file__).resolve().parents[3]
 STATE_FILE = ROOT / "state" / "funding_contrarian_state.json"
+ALT_STATE_FILE = ROOT / "state" / "alt_momentum_state.json"
 
 _provider = CryptoProvider("binance")
 
@@ -129,6 +130,32 @@ async def get_state():
         "fr_zscore": zscore,
         "last_updated": state.get("last_updated"),
     }
+
+
+@app.get("/api/alt_state")
+async def get_alt_state():
+    """알트_데일리_봇 상태."""
+    if ALT_STATE_FILE.exists():
+        try:
+            data = json.loads(ALT_STATE_FILE.read_text())
+            positions = data.get("positions", [])
+            trade_log = data.get("trade_log", [])[-30:]
+            pnls = [t["pnl_pct"] for t in trade_log] if trade_log else []
+            wins = [p for p in pnls if p > 0]
+            return {
+                "positions": positions,
+                "position_count": len(positions),
+                "trade_log": trade_log,
+                "total_trades": len(data.get("trade_log", [])),
+                "wins": len(wins),
+                "win_rate": round(len(wins)/len(pnls)*100, 1) if pnls else 0,
+                "avg_pnl": round(float(np.mean(pnls)), 3) if pnls else 0,
+                "cumulative": round(sum(pnls), 2) if pnls else 0,
+                "last_updated": data.get("last_updated"),
+            }
+        except Exception:
+            pass
+    return {"positions": [], "position_count": 0, "trade_log": [], "total_trades": 0}
 
 
 @app.websocket("/ws/candles/{timeframe}")
@@ -243,7 +270,8 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
         <span><span class="label">펀딩비</span><span class="value" id="hdr-fr">--</span></span>
         <span><span class="label">FR z-score</span><span class="value" id="hdr-zscore">--</span></span>
         <span><span class="label">봇 상태</span><span class="value" id="hdr-status">--</span></span>
-        <span><span class="label">모드</span><span class="value warning">PAPER 3x</span></span>
+        <span><span class="label">BTC 모드</span><span class="value warning">PAPER 3x</span></span>
+        <span><span class="label">알트봇</span><span class="value" id="hdr-alt" style="color:#3498db;">-</span></span>
     </div>
 </div>
 
@@ -285,10 +313,24 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
             <div class="row"><span class="label">히스토리</span><span class="val" id="fr-count">-</span></div>
         </div>
 
-        <h3 style="margin-top:20px;">거래 이력</h3>
+        <h3 style="margin-top:20px;">BTC 거래 이력</h3>
         <table class="trade-table">
             <thead><tr><th>#</th><th>방향</th><th>PnL(3x)</th><th>사유</th></tr></thead>
             <tbody id="trade-tbody"></tbody>
+        </table>
+
+        <h3 style="margin-top:24px;color:#3498db;">알트_데일리_봇</h3>
+        <div>
+            <div class="row"><span class="label">상태</span><span class="val" id="alt-status">-</span></div>
+            <div class="row"><span class="label">포지션</span><span class="val" id="alt-pos-count">0/5</span></div>
+            <div class="row"><span class="label">총 거래</span><span class="val" id="alt-trades">0</span></div>
+            <div class="row"><span class="label">승률</span><span class="val" id="alt-winrate">-</span></div>
+            <div class="row"><span class="label">누적 PnL</span><span class="val" id="alt-pnl">0%</span></div>
+        </div>
+        <div id="alt-positions" style="margin-top:8px;"></div>
+        <table class="trade-table" style="margin-top:8px;">
+            <thead><tr><th>심볼</th><th>PnL</th><th>사유</th></tr></thead>
+            <tbody id="alt-trade-tbody"></tbody>
         </table>
     </div>
 </div>
@@ -646,11 +688,58 @@ chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
     if(range) rsiChart.timeScale().setVisibleRange(range);
 });
 
+// 알트봇 상태 로드
+async function loadAltState() {
+    try {
+        const res = await fetch('/api/alt_state');
+        const s = await res.json();
+
+        document.getElementById('hdr-alt').textContent = s.position_count>0? s.position_count+'포지션':'스캔중';
+        document.getElementById('hdr-alt').style.color = s.position_count>0? '#f6465d':'#3498db';
+        document.getElementById('alt-pos-count').textContent = s.position_count + '/5';
+        document.getElementById('alt-trades').textContent = s.total_trades;
+        document.getElementById('alt-winrate').textContent = s.win_rate ? s.win_rate+'%' : '-';
+
+        const pnlEl = document.getElementById('alt-pnl');
+        pnlEl.textContent = (s.cumulative>0?'+':'') + s.cumulative + '%';
+        pnlEl.style.color = s.cumulative>=0 ? '#0ecb81' : '#f6465d';
+
+        // 활성 포지션 상태
+        if(s.position_count > 0) {
+            document.getElementById('alt-status').innerHTML = '<span class="status-dot red"></span>' + s.position_count + '개 보유';
+            let posHtml = '';
+            s.positions.forEach(p => {
+                posHtml += '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid #2b3139;">' +
+                    '<span style="color:#f0b90b;">' + p.symbol + '</span> ' +
+                    '<span style="color:#0ecb81;">LONG</span> ' +
+                    '@' + p.entry_price.toFixed(4) + ' ' +
+                    '<span style="color:#848e9c;">' + p.bars_held + '/' + p.max_hold + 'h</span></div>';
+            });
+            document.getElementById('alt-positions').innerHTML = posHtml;
+        } else {
+            document.getElementById('alt-status').innerHTML = '<span class="status-dot green"></span>스캔 중';
+            document.getElementById('alt-positions').innerHTML = '';
+        }
+
+        // 알트 거래 이력
+        const tbody = document.getElementById('alt-trade-tbody');
+        tbody.innerHTML = '';
+        (s.trade_log||[]).reverse().slice(0,10).forEach(t => {
+            const cls = t.pnl_pct > 0 ? 'win' : 'loss';
+            tbody.innerHTML += '<tr><td>' + t.symbol.replace('/USDT','') + '</td>' +
+                '<td class="' + cls + '">' + (t.pnl_pct>0?'+':'') + t.pnl_pct + '%</td>' +
+                '<td>' + t.reason + '</td></tr>';
+        });
+    } catch(e) {}
+}
+
 // Init
 loadCandles(currentTF);
 connectWS(currentTF);
 loadState();
+loadAltState();
 setInterval(loadState, 30000);
+setInterval(loadAltState, 30000);
 </script>
 </body>
 </html>"""
