@@ -89,8 +89,16 @@ class Position:
     entry_time: str = ""
 
     def should_exit(self, current_high: float, current_low: float) -> tuple[bool, str]:
-        if self.bars_held >= self.max_hold:
-            return True, "hold_timeout"
+        # 시간 기반 timeout (max_hold = 시간 단위)
+        if self.entry_time:
+            from datetime import datetime, timezone
+            try:
+                entry_dt = datetime.fromisoformat(self.entry_time)
+                elapsed_hours = (datetime.now(timezone.utc) - entry_dt).total_seconds() / 3600
+                if elapsed_hours >= self.max_hold:
+                    return True, "hold_timeout"
+            except Exception:
+                pass
         if self.side == "LONG" and current_low <= self.stop_loss:
             return True, "stop_loss"
         if self.side == "SHORT" and current_high >= self.stop_loss:

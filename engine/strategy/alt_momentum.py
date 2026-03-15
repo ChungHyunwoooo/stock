@@ -80,8 +80,17 @@ class AltPosition:
             return True, "tp", self.tp_price
         if low <= self.sl_price:
             return True, "sl", self.sl_price
-        if self.bars_held >= self.max_hold:
-            return True, "timeout", close
+        # 시간 기반 timeout (max_hold 시간)
+        if self.entry_time:
+            from datetime import datetime, timezone
+            try:
+                entry_dt = datetime.fromisoformat(self.entry_time)
+                elapsed_hours = (datetime.now(timezone.utc) - entry_dt).total_seconds() / 3600
+                if elapsed_hours >= self.max_hold:
+                    return True, "timeout", close
+            except Exception:
+                if self.bars_held >= self.max_hold * 60:  # fallback: poll 횟수 기반
+                    return True, "timeout", close
         return False, "", 0.0
 
     def tick(self) -> None:
