@@ -158,6 +158,69 @@ async def get_alt_state():
     return {"positions": [], "position_count": 0, "trade_log": [], "total_trades": 0}
 
 
+@app.get("/api/history")
+async def get_history():
+    """통합 매매 히스토리 (BTC봇 + 알트봇)."""
+    trades = []
+
+    # BTC봇
+    btc_state = _read_bot_state()
+    for t in btc_state.get("trade_log", []):
+        trades.append({
+            "bot": "BTC_선물_봇",
+            "symbol": t.get("symbol", "BTC/USDT"),
+            "side": t.get("side", ""),
+            "entry": t.get("entry", 0),
+            "exit": t.get("exit", 0),
+            "pnl": t.get("pnl_pct_lev", t.get("pnl_pct", 0)),
+            "bars": t.get("bars_held", 0),
+            "reason": t.get("reason", ""),
+            "entry_time": t.get("entry_time", ""),
+            "exit_time": t.get("exit_time", ""),
+        })
+
+    # 알트봇
+    if ALT_STATE_FILE.exists():
+        try:
+            alt_data = json.loads(ALT_STATE_FILE.read_text())
+            for t in alt_data.get("trade_log", []):
+                trades.append({
+                    "bot": "알트_데일리_봇",
+                    "symbol": t.get("symbol", ""),
+                    "side": t.get("side", "LONG"),
+                    "entry": t.get("entry", 0),
+                    "exit": t.get("exit", 0),
+                    "pnl": t.get("pnl_pct", 0),
+                    "bars": t.get("bars_held", 0),
+                    "reason": t.get("reason", ""),
+                    "entry_time": t.get("entry_time", ""),
+                    "exit_time": t.get("exit_time", ""),
+                })
+        except Exception:
+            pass
+
+    # 시간순 정렬 (최신 먼저)
+    trades.sort(key=lambda x: x.get("exit_time", ""), reverse=True)
+
+    # 통계
+    pnls = [t["pnl"] for t in trades]
+    wins = [p for p in pnls if p > 0]
+    losses = [p for p in pnls if p <= 0]
+
+    stats = {
+        "total": len(trades),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins)/len(pnls)*100, 1) if pnls else 0,
+        "avg_pnl": round(float(np.mean(pnls)), 3) if pnls else 0,
+        "cumulative": round(sum(pnls), 2) if pnls else 0,
+        "best": round(max(pnls), 2) if pnls else 0,
+        "worst": round(min(pnls), 2) if pnls else 0,
+    }
+
+    return {"trades": trades[:100], "stats": stats}
+
+
 @app.websocket("/ws/candles/{timeframe}")
 async def ws_candles(websocket: WebSocket, timeframe: str = "1h"):
     """실시간 캔들 스트리밍."""
@@ -349,11 +412,34 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
     </div>
 </div>
 
-<div class="footer">
-    <div class="stat"><div class="label">총 거래</div><div class="val" id="ft-trades">0</div></div>
-    <div class="stat"><div class="label">승률</div><div class="val" id="ft-winrate">-</div></div>
-    <div class="stat"><div class="label">누적 PnL</div><div class="val" id="ft-pnl">0%</div></div>
-    <div class="stat"><div class="label">마지막 업데이트</div><div class="val" id="ft-updated">-</div></div>
+<div class="footer" style="cursor:pointer;" onclick="toggleHistory()">
+    <div class="stat"><div class="label">BTC 거래</div><div class="val" id="ft-trades">0</div></div>
+    <div class="stat"><div class="label">BTC 승률</div><div class="val" id="ft-winrate">-</div></div>
+    <div class="stat"><div class="label">BTC PnL</div><div class="val" id="ft-pnl">0%</div></div>
+    <div class="stat"><div class="label">알트 거래</div><div class="val" id="ft-alt-trades">0</div></div>
+    <div class="stat"><div class="label">알트 PnL</div><div class="val" id="ft-alt-pnl">0%</div></div>
+    <div class="stat"><div class="label">▲ 히스토리</div><div class="val" id="ft-updated">-</div></div>
+</div>
+
+<div id="history-panel" style="display:none;background:#1e2329;border-top:1px solid #2b3139;max-height:300px;overflow-y:auto;padding:8px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h3 style="color:#f0b90b;font-size:14px;margin:0;">전체 매매 히스토리</h3>
+        <div style="display:flex;gap:4px;">
+            <button class="tf-btn active" onclick="filterHistory('all')" id="hf-all">전체</button>
+            <button class="tf-btn" onclick="filterHistory('btc')" id="hf-btc">BTC봇</button>
+            <button class="tf-btn" onclick="filterHistory('alt')" id="hf-alt">알트봇</button>
+            <button class="tf-btn" onclick="filterHistory('win')" id="hf-win">승</button>
+            <button class="tf-btn" onclick="filterHistory('loss')" id="hf-loss">패</button>
+        </div>
+    </div>
+    <table class="trade-table" style="font-size:12px;">
+        <thead><tr>
+            <th>시간</th><th>봇</th><th>심볼</th><th>방향</th>
+            <th>진입</th><th>청산</th><th>PnL</th><th>보유</th><th>사유</th>
+        </tr></thead>
+        <tbody id="history-tbody"></tbody>
+    </table>
+    <div id="history-stats" style="margin-top:8px;padding:8px;background:#0b0e11;border-radius:4px;font-size:11px;display:flex;gap:24px;"></div>
 </div>
 
 <script>
@@ -746,6 +832,78 @@ async function loadAltState() {
                 '<td>' + t.reason + '</td></tr>';
         });
     } catch(e) {}
+}
+
+// 히스토리 패널
+let allHistory = [];
+let historyFilter = 'all';
+
+function toggleHistory() {
+    const panel = document.getElementById('history-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if(panel.style.display === 'block') loadHistory();
+}
+
+async function loadHistory() {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    allHistory = data.trades || [];
+    renderHistory();
+
+    // 통계
+    const s = data.stats;
+    document.getElementById('history-stats').innerHTML =
+        '<span>총 <b>' + s.total + '</b>건</span>' +
+        '<span>승률 <b style="color:#0ecb81;">' + s.win_rate + '%</b></span>' +
+        '<span>평균 <b>' + (s.avg_pnl>0?'+':'') + s.avg_pnl + '%</b></span>' +
+        '<span>누적 <b style="color:' + (s.cumulative>=0?'#0ecb81':'#f6465d') + ';">' + (s.cumulative>0?'+':'') + s.cumulative + '%</b></span>' +
+        '<span>최고 <b style="color:#0ecb81;">+' + s.best + '%</b></span>' +
+        '<span>최저 <b style="color:#f6465d;">' + s.worst + '%</b></span>';
+
+    // 푸터 알트 통계
+    const altTrades = allHistory.filter(t => t.bot.includes('알트'));
+    const altPnls = altTrades.map(t => t.pnl);
+    document.getElementById('ft-alt-trades').textContent = altTrades.length;
+    const altCum = altPnls.reduce((a,b)=>a+b, 0);
+    const altEl = document.getElementById('ft-alt-pnl');
+    altEl.textContent = (altCum>0?'+':'') + altCum.toFixed(1) + '%';
+    altEl.style.color = altCum>=0 ? '#0ecb81' : '#f6465d';
+}
+
+function filterHistory(type) {
+    historyFilter = type;
+    document.querySelectorAll('#history-panel .tf-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('hf-' + type).classList.add('active');
+    renderHistory();
+}
+
+function renderHistory() {
+    let filtered = allHistory;
+    if(historyFilter === 'btc') filtered = allHistory.filter(t => t.bot.includes('BTC'));
+    else if(historyFilter === 'alt') filtered = allHistory.filter(t => t.bot.includes('알트'));
+    else if(historyFilter === 'win') filtered = allHistory.filter(t => t.pnl > 0);
+    else if(historyFilter === 'loss') filtered = allHistory.filter(t => t.pnl <= 0);
+
+    const tbody = document.getElementById('history-tbody');
+    tbody.innerHTML = '';
+    filtered.slice(0, 50).forEach(t => {
+        const cls = t.pnl > 0 ? 'win' : 'loss';
+        const botTag = t.bot.includes('BTC') ? '<span style="color:#f0b90b;">BTC</span>' : '<span style="color:#3498db;">ALT</span>';
+        const time = t.exit_time ? new Date(t.exit_time).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+        const sym = t.symbol.replace('/USDT','');
+        const entry = typeof t.entry === 'number' ? t.entry.toFixed(t.entry>1000?0:4) : t.entry;
+        const exit = typeof t.exit === 'number' ? t.exit.toFixed(t.exit>1000?0:4) : t.exit;
+        tbody.innerHTML += '<tr style="cursor:pointer;" onclick="switchToSymbol(\'' + t.symbol + '\')">' +
+            '<td style="color:#848e9c;">' + time + '</td>' +
+            '<td>' + botTag + '</td>' +
+            '<td>' + sym + '</td>' +
+            '<td class="' + cls + '">' + t.side + '</td>' +
+            '<td>' + entry + '</td>' +
+            '<td>' + exit + '</td>' +
+            '<td class="' + cls + '">' + (t.pnl>0?'+':'') + t.pnl + '%</td>' +
+            '<td style="color:#848e9c;">' + t.bars + 'h</td>' +
+            '<td style="color:#848e9c;">' + t.reason + '</td></tr>';
+    });
 }
 
 // 심볼 선택
