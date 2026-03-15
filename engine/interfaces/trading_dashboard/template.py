@@ -218,6 +218,16 @@ const rsiSeries = rsiChart.addLineSeries({ color:'#e6a307', lineWidth:1, title:'
 const rsi70 = rsiChart.addLineSeries({color:'#f6465d33',lineWidth:1,lineStyle:2});
 const rsi30 = rsiChart.addLineSeries({color:'#0ecb8133',lineWidth:1,lineStyle:2});
 
+// 스마트 가격 포맷 (1000SATS 등 극소 가격 대응)
+function fmtPrice(p) {
+    if(p === null || p === undefined || isNaN(p)) return '-';
+    if(p >= 1000) return '$' + p.toLocaleString(undefined, {maximumFractionDigits:2});
+    if(p >= 1) return '$' + p.toFixed(4);
+    if(p >= 0.001) return '$' + p.toFixed(6);
+    // 극소 가격: 유효숫자 4자리
+    return '$' + p.toPrecision(4);
+}
+
 let currentTF = '1h';
 let ws = null;
 let entryPriceLine = null;
@@ -248,7 +258,7 @@ function renderCandles(data) {
     rsi70.setData(rsiData.map(c=>({time:c.time,value:70})));
     rsi30.setData(rsiData.map(c=>({time:c.time,value:30})));
     if(data.length) {
-        document.getElementById('hdr-price').textContent = '$' + data[data.length-1].close.toLocaleString();
+        document.getElementById('hdr-price').textContent = fmtPrice(data[data.length-1].close);
         document.getElementById('hdr-price').className = 'price ' + (data[data.length-1].close >= data[data.length-1].open ? 'up' : 'down');
     }
 }
@@ -398,7 +408,7 @@ function updatePositionLines(pos) {
         lineWidth: 2,
         lineStyle: LightweightCharts.LineStyle.Solid,
         axisLabelVisible: true,
-        title: pos.side + ' Entry $' + pos.entry_price.toLocaleString(),
+        title: pos.side + ' Entry $' + fmtPrice(pos.entry_price).replace('$',''),
     });
 
     // 손절가 라인 (빨강 점선)
@@ -408,7 +418,7 @@ function updatePositionLines(pos) {
         lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed,
         axisLabelVisible: true,
-        title: 'SL $' + pos.stop_loss.toLocaleString(),
+        title: 'SL $' + fmtPrice(pos.stop_loss).replace('$',''),
     });
 }
 
@@ -431,7 +441,7 @@ function connectWS(tf) {
                 const c = msg.data;
                 candleSeries.update({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close});
                 volumeSeries.update({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'});
-                document.getElementById('hdr-price').textContent = '$' + c.close.toLocaleString();
+                document.getElementById('hdr-price').textContent = fmtPrice(c.close);
             }
             if(msg.type==='state') updateState(msg.data);
         } catch(err) {}
@@ -479,8 +489,8 @@ function updateFullState(s) {
         document.getElementById('pos-status').innerHTML = '<span class="status-dot red"></span>포지션 보유';
         document.getElementById('pos-side').textContent = pos.side;
         document.getElementById('pos-side').className = 'val ' + (pos.side==='LONG'?'long':'short');
-        document.getElementById('pos-entry').textContent = '$' + pos.entry_price.toLocaleString();
-        document.getElementById('pos-sl').textContent = '$' + pos.stop_loss.toLocaleString();
+        document.getElementById('pos-entry').textContent = '$' + fmtPrice(pos.entry_price).replace('$','');
+        document.getElementById('pos-sl').textContent = '$' + fmtPrice(pos.stop_loss).replace('$','');
         document.getElementById('pos-hold').textContent = pos.bars_held + '/' + pos.max_hold + 'h';
         document.getElementById('hdr-status').innerHTML = '<span class="status-dot red"></span>' + pos.side;
     } else {
