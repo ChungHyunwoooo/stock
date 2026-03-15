@@ -685,10 +685,16 @@ function updatePositionLines(pos) {
 }
 
 var wsTimer = null;
+var wsConnecting = false;
 function connectWS(tf) {
-    if(ws) { try{ws.close();}catch(e){} ws=null; }
-    if(wsTimer) clearTimeout(wsTimer);
+    if(wsTimer) { clearTimeout(wsTimer); wsTimer=null; }
+    if(ws) {
+        try { ws.onclose=null; ws.onerror=null; ws.close(); } catch(e) {}
+        ws=null;
+    }
     wsTimer = setTimeout(function() {
+        if(wsConnecting) return;
+        wsConnecting = true;
         ws = new WebSocket('ws://'+location.host+'/ws/candles/'+tf+'?symbol='+encodeURIComponent(currentSymbol));
     ws.onmessage = (e) => {
         try {
@@ -702,9 +708,10 @@ function connectWS(tf) {
             if(msg.type==='state') updateState(msg.data);
         } catch(err) {}
     };
-    ws.onerror = function(){};
-    ws.onclose = function(){ setTimeout(function(){connectWS(tf);}, 5000); };
-    }, 300);
+    ws.onopen = function(){ wsConnecting=false; };
+    ws.onerror = function(){ wsConnecting=false; };
+    ws.onclose = function(){ wsConnecting=false; setTimeout(function(){connectWS(tf);}, 5000); };
+    }, 500);
 }
 
 async function loadState() {
