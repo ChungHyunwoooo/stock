@@ -240,6 +240,40 @@ class FundingContrarianBot:
         self._provider = CryptoProvider("binance")
         self._state_path = Path(self.config.state_file)
 
+    def _bootstrap_funding_history(self) -> None:
+        """시작 시 과거 펀딩비를 API에서 한번에 로드.
+
+        백테스트와 동일한 조건: 150개 이상의 펀딩비 정산 값.
+        8h 간격 → 150개 = 50일치.
+        """
+        from engine.data.provider_crypto import _build_futures_exchange
+        import pandas as pd
+
+        try:
+            ex = _build_futures_exchange("binance")
+            since = int((pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=60)).timestamp() * 1000)
+            all_fr = []
+            for _ in range(10):
+                fr = ex.fetch_funding_rate_history(
+                    self.config.futures_symbol, since=since, limit=1000,
+                )
+                if not fr:
+                    break
+                all_fr.extend(fr)
+                since = fr[-1]["timestamp"] + 1
+                import time as _t
+                _t.sleep(0.3)
+
+            rates = [float(r.get("fundingRate", 0)) for r in all_fr]
+            if rates:
+                self.scanner._fr_history = rates
+                logger.info("펀딩비 히스토리 부트스트랩: %d건 (%.0f일)",
+                           len(rates), len(rates) * 8 / 24)
+            else:
+                logger.warning("펀딩비 히스토리 부트스트랩 실패: 0건")
+        except Exception as e:
+            logger.error("펀딩비 부트스트랩 오류: %s", e)
+
     def _load_state(self) -> None:
         """상태 복원 (재시작 대비)."""
         if self._state_path.exists():
@@ -248,13 +282,22 @@ class FundingContrarianBot:
                 if data.get("position"):
                     self.position = Position.from_dict(data["position"])
                 self.cooldown_remaining = data.get("cooldown_remaining", 0)
-                self.scanner._fr_history = data.get("fr_history", [])
+                fr_hist = data.get("fr_history", [])
+                if len(fr_hist) >= self.config.fr_lookback:
+                    self.scanner._fr_history = fr_hist
+                    logger.info("상태 복원: fr_history=%d (저장된 것 사용)", len(fr_hist))
+                else:
+                    logger.info("저장된 fr_history 부족(%d), API 부트스트랩", len(fr_hist))
+                    self._bootstrap_funding_history()
                 self.trade_log = data.get("trade_log", [])
                 logger.info("상태 복원: position=%s, cooldown=%d, fr_history=%d",
                            self.position is not None, self.cooldown_remaining,
                            len(self.scanner._fr_history))
             except Exception as e:
                 logger.warning("상태 복원 실패: %s", e)
+                self._bootstrap_funding_history()
+        else:
+            self._bootstrap_funding_history()
 
     def _save_state(self) -> None:
         """상태 저장."""
@@ -331,10 +374,12 @@ class FundingContrarianBot:
 
     def step(self) -> None:
         """1봉(1h) 처리 — 메인 루프에서 호출."""
-        # 펀딩비 업데이트
+        # 펀딩비 업데이트: 값이 변경됐을 때만 히스토리에 추가 (8h마다)
         fr = self._fetch_funding_rate()
         if fr is not None:
-            self.scanner.update_funding_rate(fr)
+            last_fr = self.scanner._fr_history[-1] if self.scanner._fr_history else None
+            if last_fr is None or abs(fr - last_fr) > 1e-10:
+                self.scanner.update_funding_rate(fr)
 
         # OHLCV
         df = self._fetch_ohlcv()
