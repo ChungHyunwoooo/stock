@@ -27,6 +27,9 @@ async def index():
 @router.get("/api/candles/{timeframe}")
 async def api_candles(timeframe: str = "1h", limit: int = 200,
                       before: int | None = None, symbol: str = "BTC/USDT"):
+    valid_tf = {"1m", "5m", "15m", "1h", "4h", "1d"}
+    if timeframe not in valid_tf:
+        timeframe = "1h"
     if before:
         import pandas as pd
         end = pd.Timestamp(before, unit="s", tz="UTC")

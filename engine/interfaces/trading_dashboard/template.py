@@ -529,9 +529,9 @@ function updateFullState(s) {
 }
 
 // TF buttons
-document.querySelectorAll('.tf-btn').forEach(btn => {
+document.querySelectorAll('.tf-buttons .tf-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tf-buttons .tf-btn').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         currentTF = btn.dataset.tf;
         loadCandles(currentTF);
