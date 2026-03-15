@@ -40,15 +40,22 @@ def _read_bot_state() -> dict:
 
 
 def _fetch_candles(timeframe: str = "1h", limit: int = 200) -> list[dict]:
-    """바이낸스에서 캔들 데이터 가져오기."""
+    """바이낸스에서 캔들 + 지표 데이터."""
     import pandas as pd
+    import talib
     end = pd.Timestamp.now(tz="UTC")
     tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
-    hours = tf_hours.get(timeframe, 1) * limit
+    hours = tf_hours.get(timeframe, 1) * (limit + 60)  # 지표 계산용 여유
     start = end - pd.Timedelta(hours=hours)
     df = _provider.fetch_ohlcv("BTC/USDT", str(start), str(end), timeframe)
+
+    close = df["close"].values.astype(np.float64)
+    ema20 = talib.EMA(close, timeperiod=20)
+    ema50 = talib.EMA(close, timeperiod=50)
+    rsi = talib.RSI(close, timeperiod=14)
+
     candles = []
-    for ts, row in df.iterrows():
+    for i, (ts, row) in enumerate(df.iterrows()):
         t = int(ts.timestamp()) if hasattr(ts, 'timestamp') else int(pd.Timestamp(ts).timestamp())
         candles.append({
             "time": t,
@@ -57,8 +64,12 @@ def _fetch_candles(timeframe: str = "1h", limit: int = 200) -> list[dict]:
             "low": float(row["low"]),
             "close": float(row["close"]),
             "volume": float(row["volume"]),
+            "ema20": round(float(ema20[i]), 2) if not np.isnan(ema20[i]) else None,
+            "ema50": round(float(ema50[i]), 2) if not np.isnan(ema50[i]) else None,
+            "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
         })
-    return candles
+    # limit만큼만 반환
+    return candles[-limit:]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -67,7 +78,31 @@ async def index():
 
 
 @app.get("/api/candles/{timeframe}")
-async def get_candles(timeframe: str = "1h", limit: int = 200):
+async def get_candles(timeframe: str = "1h", limit: int = 200, before: int | None = None):
+    """캔들 조회. before=timestamp면 해당 시점 이전 데이터."""
+    if before:
+        import pandas as pd
+        end = pd.Timestamp(before, unit="s", tz="UTC")
+        tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
+        hours = tf_hours.get(timeframe, 1) * (limit + 60)
+        start = end - pd.Timedelta(hours=hours)
+        df = _provider.fetch_ohlcv("BTC/USDT", str(start), str(end), timeframe)
+        import talib
+        close = df["close"].values.astype(np.float64)
+        ema20 = talib.EMA(close, timeperiod=20)
+        ema50 = talib.EMA(close, timeperiod=50)
+        rsi = talib.RSI(close, timeperiod=14)
+        candles = []
+        for i, (ts, row) in enumerate(df.iterrows()):
+            t = int(ts.timestamp()) if hasattr(ts, 'timestamp') else int(pd.Timestamp(ts).timestamp())
+            candles.append({
+                "time": t, "open": float(row["open"]), "high": float(row["high"]),
+                "low": float(row["low"]), "close": float(row["close"]), "volume": float(row["volume"]),
+                "ema20": round(float(ema20[i]), 2) if not np.isnan(ema20[i]) else None,
+                "ema50": round(float(ema50[i]), 2) if not np.isnan(ema50[i]) else None,
+                "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
+            })
+        return candles[-limit:]
     return _fetch_candles(timeframe, limit)
 
 
@@ -222,7 +257,15 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
 </div>
 
 <div class="main">
-    <div class="chart-area"><div id="chart"></div></div>
+    <div class="chart-area">
+        <div id="chart" style="height:calc(100% - 100px);"></div>
+        <div id="rsi-chart" style="height:80px;border-top:1px solid #2b3139;"></div>
+        <div id="sync-bar" style="height:20px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#1e2329;border-top:1px solid #2b3139;font-size:10px;color:#848e9c;">
+            <span>마지막 동기화: <span id="sync-time">-</span></span>
+            <span>다음 동기화: <span id="sync-countdown">-</span></span>
+            <span id="cooldown-bar" style="color:#f0b90b;display:none;">쿨다운 <span id="cd-remain">0</span>/24h</span>
+        </div>
+    </div>
     <div class="panel">
         <h3>포지션</h3>
         <div id="position-panel">
@@ -258,6 +301,7 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
 </div>
 
 <script>
+// === 메인 차트 (캔들 + EMA + 볼륨) ===
 const chartEl = document.getElementById('chart');
 const chart = LightweightCharts.createChart(chartEl, {
     layout: { background:{type:'solid',color:'#0b0e11'}, textColor:'#848e9c' },
@@ -271,59 +315,183 @@ const candleSeries = chart.addCandlestickSeries({
     borderUpColor:'#0ecb81', borderDownColor:'#f6465d',
     wickUpColor:'#0ecb81', wickDownColor:'#f6465d',
 });
+const ema20Series = chart.addLineSeries({ color:'#f0b90b', lineWidth:1, title:'EMA20' });
+const ema50Series = chart.addLineSeries({ color:'#3498db', lineWidth:1, title:'EMA50' });
 const volumeSeries = chart.addHistogramSeries({
     priceFormat:{type:'volume'}, priceScaleId:'vol',
 });
-chart.priceScale('vol').applyOptions({scaleMargins:{top:0.8,bottom:0}});
+chart.priceScale('vol').applyOptions({scaleMargins:{top:0.85,bottom:0}});
+
+// === RSI 서브차트 ===
+const rsiEl = document.getElementById('rsi-chart');
+const rsiChart = LightweightCharts.createChart(rsiEl, {
+    layout: { background:{type:'solid',color:'#0b0e11'}, textColor:'#848e9c' },
+    grid: { vertLines:{color:'#1e2329'}, horzLines:{color:'#1e2329'} },
+    rightPriceScale: { borderColor:'#2b3139' },
+    timeScale: { visible:false },
+    height: 80,
+});
+const rsiSeries = rsiChart.addLineSeries({ color:'#e6a307', lineWidth:1, title:'RSI(14)' });
+// RSI 70/30 라인
+const rsi70 = rsiChart.addLineSeries({color:'#f6465d33',lineWidth:1,lineStyle:2});
+const rsi30 = rsiChart.addLineSeries({color:'#0ecb8133',lineWidth:1,lineStyle:2});
 
 let currentTF = '1h';
 let ws = null;
 let entryPriceLine = null;
 let slPriceLine = null;
 
+let allCandles = [];
+let loadingMore = false;
+
 async function loadCandles(tf) {
-    const res = await fetch('/api/candles/' + tf + '?limit=300');
+    const res = await fetch('/api/candles/' + tf + '?limit=500');
     const data = await res.json();
+    allCandles = data;
+    renderCandles(data);
+    await loadTradeMarkers(data);
+    updateSyncTime();
+}
+
+function renderCandles(data) {
     candleSeries.setData(data.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
     volumeSeries.setData(data.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(14,203,129,0.3)':'rgba(246,70,93,0.3)'})));
+    // EMA
+    ema20Series.setData(data.filter(c=>c.ema20).map(c=>({time:c.time,value:c.ema20})));
+    ema50Series.setData(data.filter(c=>c.ema50).map(c=>({time:c.time,value:c.ema50})));
+    // RSI
+    const rsiData = data.filter(c=>c.rsi).map(c=>({time:c.time,value:c.rsi}));
+    rsiSeries.setData(rsiData);
+    rsi70.setData(rsiData.map(c=>({time:c.time,value:70})));
+    rsi30.setData(rsiData.map(c=>({time:c.time,value:30})));
     if(data.length) document.getElementById('hdr-price').textContent = '$' + data[data.length-1].close.toLocaleString();
-    // 과거 거래 마커
-    await loadTradeMarkers(data);
 }
+
+// 스크롤 시 과거 봉 자동 로드
+chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
+    if(!range || loadingMore) return;
+    if(range.from < 10 && allCandles.length > 0) {
+        loadingMore = true;
+        const oldest = allCandles[0].time;
+        try {
+            const res = await fetch('/api/candles/' + currentTF + '?limit=500&before=' + oldest);
+            const older = await res.json();
+            if(older.length > 0) {
+                const filtered = older.filter(c => c.time < oldest);
+                if(filtered.length > 0) {
+                    allCandles = [...filtered, ...allCandles];
+                    renderCandles(allCandles);
+                }
+            }
+        } catch(e) {}
+        loadingMore = false;
+    }
+});
+
+// 동기화 시간
+let lastSyncTime = null;
+let syncInterval = 60;
+function updateSyncTime() {
+    lastSyncTime = new Date();
+    document.getElementById('sync-time').textContent = lastSyncTime.toLocaleTimeString('ko-KR');
+}
+setInterval(() => {
+    if(!lastSyncTime) return;
+    const elapsed = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
+    const remain = Math.max(0, syncInterval - elapsed);
+    document.getElementById('sync-countdown').textContent = remain + 's';
+}, 1000);
 
 async function loadTradeMarkers(candleData) {
     const stateRes = await fetch('/api/state');
     const state = await stateRes.json();
     const trades = state.trade_log || [];
-    if(!trades.length || !candleData.length) return;
 
     const markers = [];
+
+    // 과거 거래: B/S 진입 + 청산 마커
     trades.forEach(t => {
         if(!t.entry_time) return;
         const entryTs = Math.floor(new Date(t.entry_time).getTime()/1000);
         const exitTs = t.exit_time ? Math.floor(new Date(t.exit_time).getTime()/1000) : null;
         const isWin = t.pnl_pct_lev > 0;
-        // 진입 마커
+        const isLong = t.side === 'LONG';
+
+        // 진입: B or S
         markers.push({
             time: entryTs,
-            position: t.side==='LONG' ? 'belowBar' : 'aboveBar',
-            color: t.side==='LONG' ? '#0ecb81' : '#f6465d',
-            shape: t.side==='LONG' ? 'arrowUp' : 'arrowDown',
-            text: t.side + ' ' + (t.pnl_pct_lev>0?'+':'') + t.pnl_pct_lev + '%',
+            position: isLong ? 'belowBar' : 'aboveBar',
+            color: isLong ? '#0ecb81' : '#f6465d',
+            shape: isLong ? 'arrowUp' : 'arrowDown',
+            text: (isLong ? 'B' : 'S') + ' ' + (isWin?'+':'') + t.pnl_pct_lev + '%',
         });
-        // 청산 마커
+
+        // 청산: X 마커
         if(exitTs) {
             markers.push({
                 time: exitTs,
-                position: 'inBar',
+                position: isLong ? 'aboveBar' : 'belowBar',
                 color: isWin ? '#0ecb81' : '#f6465d',
                 shape: 'circle',
-                text: t.reason,
+                text: (isWin?'✓':'✗') + ' ' + t.reason,
             });
         }
     });
+
+    // 현재 포지션: 활성 B/S
+    const pos = state.position;
+    if(pos && candleData.length) {
+        const entryTs = pos.entry_time ? Math.floor(new Date(pos.entry_time).getTime()/1000) : candleData[candleData.length-1].time;
+        markers.push({
+            time: entryTs,
+            position: pos.side==='LONG' ? 'belowBar' : 'aboveBar',
+            color: '#f0b90b',
+            shape: pos.side==='LONG' ? 'arrowUp' : 'arrowDown',
+            text: (pos.side==='LONG'?'B':'S') + ' ACTIVE ' + pos.bars_held + '/' + pos.max_hold + 'h',
+        });
+    }
+
     markers.sort((a,b) => a.time - b.time);
     if(markers.length) candleSeries.setMarkers(markers);
+
+    // 쿨다운 영역 표시 (진입~청산 후 24h를 배경색으로)
+    updateCooldownZones(trades, candleData);
+}
+
+function updateCooldownZones(trades, candleData) {
+    // 기존 쿨다운 시리즈 제거 후 재생성
+    if(window._cdSeries) { chart.removeSeries(window._cdSeries); window._cdSeries=null; }
+    if(!trades.length || !candleData.length) return;
+
+    // 쿨다운 구간: 청산 시점 ~ 청산+24h
+    const cdData = [];
+    const minTime = candleData[0].time;
+    const maxTime = candleData[candleData.length-1].time;
+
+    trades.forEach(t => {
+        if(!t.exit_time) return;
+        const exitTs = Math.floor(new Date(t.exit_time).getTime()/1000);
+        const cdEnd = exitTs + 24*3600; // 24h 쿨다운
+        // 캔들 데이터 범위 내의 쿨다운만
+        candleData.forEach(c => {
+            if(c.time >= exitTs && c.time <= cdEnd) {
+                cdData.push({time: c.time, value: c.high * 1.001, color: 'rgba(240,185,11,0.08)'});
+            }
+        });
+    });
+
+    if(cdData.length > 0) {
+        // 중복 제거 (시간 기준)
+        const unique = {};
+        cdData.forEach(d => { if(!unique[d.time]) unique[d.time] = d; });
+        const sorted = Object.values(unique).sort((a,b) => a.time - b.time);
+        window._cdSeries = chart.addHistogramSeries({
+            priceScaleId: 'cd', color: 'rgba(240,185,11,0.08)',
+            priceFormat: {type:'price'}, lastValueVisible:false, priceLineVisible:false,
+        });
+        chart.priceScale('cd').applyOptions({scaleMargins:{top:0,bottom:0}, visible:false});
+        window._cdSeries.setData(sorted);
+    }
 }
 
 function updatePositionLines(pos) {
@@ -423,6 +591,15 @@ function updateFullState(s) {
     }
     document.getElementById('pos-cd').textContent = s.cooldown>0? s.cooldown+'h 남음':'없음';
 
+    // 쿨다운 바
+    const cdBar = document.getElementById('cooldown-bar');
+    if(s.cooldown > 0) {
+        cdBar.style.display = 'inline';
+        document.getElementById('cd-remain').textContent = s.cooldown;
+    } else {
+        cdBar.style.display = 'none';
+    }
+
     // Trade log
     const tbody = document.getElementById('trade-tbody');
     tbody.innerHTML = '';
@@ -459,7 +636,15 @@ document.querySelectorAll('.tf-btn').forEach(btn => {
 });
 
 // Resize
-new ResizeObserver(() => chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight})).observe(chartEl);
+new ResizeObserver(() => {
+    chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight});
+    rsiChart.applyOptions({width:rsiEl.clientWidth});
+}).observe(chartEl);
+
+// 메인↔RSI 시간축 동기화
+chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
+    if(range) rsiChart.timeScale().setVisibleRange(range);
+});
 
 // Init
 loadCandles(currentTF);
