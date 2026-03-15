@@ -21,7 +21,8 @@ def _get_webhook_url() -> str | None:
     try:
         data = json.loads(_CONFIG_PATH.read_text())
         return data.get("webhooks", {}).get("trade") or data.get("webhook_url")
-    except Exception:
+    except Exception as e:
+        logger.debug("웹훅 URL 로드 실패: %s", e)
         return None
 
 

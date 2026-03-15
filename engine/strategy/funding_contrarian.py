@@ -206,7 +206,8 @@ class FundingContrarianBot(BaseBot):
                 if datetime.now(timezone.utc) < datetime.fromisoformat(self.cooldown_until):
                     return
                 self.cooldown_until = ""
-            except Exception:
+            except (ValueError, TypeError) as e:
+                logger.debug("쿨다운 시간 파싱 실패: %s", e)
                 self.cooldown_until = ""
 
         # 신호 체크

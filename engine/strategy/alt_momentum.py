@@ -81,7 +81,8 @@ class AltMomentumBot(BaseBot):
                 "prev_close": float(prev["close"]),
                 "vol_history": df["volume"].values[-self.cfg.vol_ma_period:].tolist(),
             }
-        except Exception:
+        except Exception as e:
+            logger.debug("데이터 조회 실패 %s: %s", symbol, e)
             return None
 
     def _check_pump(self, data: dict) -> bool:

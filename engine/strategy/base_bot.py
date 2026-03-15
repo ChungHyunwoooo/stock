@@ -62,7 +62,8 @@ class BasePosition:
         try:
             entry_dt = datetime.fromisoformat(self.entry_time)
             return (datetime.now(timezone.utc) - entry_dt).total_seconds() / 3600
-        except Exception:
+        except (ValueError, TypeError) as e:
+            logger.debug("elapsed_hours 파싱 실패: %s", e)
             return 0.0
 
     def is_timed_out(self) -> bool:
@@ -203,8 +204,8 @@ class BaseBot(ABC):
             alert_exit(self.config.bot_name, record.symbol, record.side,
                       record.entry_price, record.exit_price,
                       record.pnl_pct, record.reason)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("청산 알림 실패: %s", e)
 
     def _alert_entry(self, symbol: str, side: str, price: float, **extra) -> None:
         """진입 알림."""
@@ -212,8 +213,8 @@ class BaseBot(ABC):
         try:
             from engine.notifications.bot_alert import alert_entry
             alert_entry(self.config.bot_name, symbol, side, price, **extra)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("진입 알림 실패: %s", e)
 
     def run(self) -> None:
         """메인 루프."""
