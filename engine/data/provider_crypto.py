@@ -72,9 +72,104 @@ class CryptoProvider(DataProvider):
         df = df[df.index <= pd.Timestamp(end, tz="UTC")]
         return df
 
+_EXCHANGE_ALIASES: dict[str, str] = {
+    "binance_futures": "binanceusdm",
+}
+
+# ---------------------------------------------------------------------------
+# Futures exchange (L3 데이터용)
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=8)
+def _build_futures_exchange(exchange: str) -> ccxt.Exchange:
+    """선물 전용 거래소 인스턴스."""
+    futures_map: dict[str, str] = {
+        "binance": "binanceusdm",
+        "bybit": "bybit",
+        "okx": "okx",
+    }
+    resolved = futures_map.get(exchange, exchange)
+    exchange_class = getattr(ccxt, resolved)
+    return exchange_class({"options": {"defaultType": "future"}})
+
+
+def fetch_funding_rate(symbol: str, exchange: str = "binance") -> float | None:
+    """현재 펀딩비 조회."""
+    try:
+        ex = _build_futures_exchange(exchange)
+        result = ex.fetch_funding_rate(symbol)
+        return float(result.get("fundingRate", 0))
+    except Exception:
+        return None
+
+
+def fetch_funding_rates_batch(
+    symbols: list[str], exchange: str = "binance",
+) -> dict[str, float]:
+    """복수 심볼 펀딩비 일괄 조회."""
+    try:
+        ex = _build_futures_exchange(exchange)
+        all_rates = ex.fetch_funding_rates(symbols)
+        return {
+            sym: float(info.get("fundingRate", 0))
+            for sym, info in all_rates.items()
+            if sym in symbols
+        }
+    except Exception:
+        rates: dict[str, float] = {}
+        for sym in symbols:
+            rate = fetch_funding_rate(sym, exchange)
+            if rate is not None:
+                rates[sym] = rate
+        return rates
+
+
+def fetch_oi(symbol: str, exchange: str = "binance") -> dict | None:
+    """현재 Open Interest 조회.
+
+    Returns:
+        {"symbol", "oi_value", "oi_notional", "price", "timestamp"} or None
+    """
+    try:
+        ex = _build_futures_exchange(exchange)
+        result = ex.fetch_open_interest(symbol)
+        return {
+            "symbol": symbol,
+            "oi_value": float(result.get("openInterestAmount", 0) or 0),
+            "oi_notional": float(result.get("openInterestValue", 0) or 0),
+            "price": float((result.get("info") or {}).get("markPrice", 0) or 0),
+            "timestamp": int(result.get("timestamp", 0) or 0),
+        }
+    except Exception:
+        return None
+
+
+def fetch_oi_history(
+    symbol: str,
+    timeframe: str = "5m",
+    limit: int = 100,
+    exchange: str = "binance",
+) -> list[dict]:
+    """OI 히스토리 조회."""
+    try:
+        ex = _build_futures_exchange(exchange)
+        history = ex.fetch_open_interest_history(symbol, timeframe, limit=limit)
+        return [
+            {
+                "symbol": symbol,
+                "oi_value": float(h.get("openInterestAmount", 0) or 0),
+                "oi_notional": float(h.get("openInterestValue", 0) or 0),
+                "timestamp": int(h.get("timestamp", 0) or 0),
+            }
+            for h in history
+        ]
+    except Exception:
+        return []
+
 @lru_cache(maxsize=16)
 def _build_exchange(exchange: str) -> ccxt.Exchange:
-    exchange_class = getattr(ccxt, exchange)
+    resolved = _EXCHANGE_ALIASES.get(exchange, exchange)
+    exchange_class = getattr(ccxt, resolved)
     return exchange_class()
 
 def get_supported_crypto_exchanges() -> list[str]:

@@ -9,42 +9,24 @@ from __future__ import annotations
 
 import logging
 
-import ccxt
 import pandas as pd
 import talib
 
+from engine.data.provider_crypto import (
+    fetch_funding_rate,
+    fetch_funding_rates_batch,
+)
 from engine.notifications.alert_discord import Signal
 
 logger = logging.getLogger(__name__)
 
-# Reuse a single exchange instance
-_exchange: ccxt.binance | None = None
-
-def _get_exchange() -> ccxt.binance:
-    global _exchange
-    if _exchange is None:
-        _exchange = ccxt.binance({"options": {"defaultType": "future"}})
-    return _exchange
-
-def fetch_funding_rate(symbol: str) -> float | None:
-    """Fetch current funding rate for a symbol from Binance Futures."""
-    try:
-        ex = _get_exchange()
-        # ccxt unified: fetchFundingRate
-        result = ex.fetch_funding_rate(symbol)
-        return float(result.get("fundingRate", 0))
-    except Exception as e:
-        logger.warning("Failed to fetch funding rate for %s: %s", symbol, e)
-        return None
 
 def fetch_funding_rates(symbols: list[str]) -> dict[str, float]:
-    """Fetch funding rates for multiple symbols."""
-    rates: dict[str, float] = {}
-    for sym in symbols:
-        rate = fetch_funding_rate(sym)
-        if rate is not None:
-            rates[sym] = rate
-    return rates
+    """Fetch funding rates for multiple symbols.
+
+    하위 호환용 래퍼. 신규 코드는 fetch_funding_rates_batch 사용.
+    """
+    return fetch_funding_rates_batch(symbols)
 
 def scan_funding_rate(
     df: pd.DataFrame,
@@ -114,25 +96,6 @@ def scan_funding_rate(
         )
 
     return None
-
-def fetch_funding_rates_batch(symbols: list[str]) -> dict[str, float]:
-    """Binance Futures에서 모든 심볼의 펀딩비를 한번에 가져오기.
-
-    개별 API 호출 대신 fetchFundingRates()로 일괄 조회.
-    """
-    try:
-        ex = _get_exchange()
-        # ccxt v4: fetchFundingRates (plural) for batch
-        all_rates = ex.fetch_funding_rates(symbols)
-        return {
-            sym: float(info.get("fundingRate", 0))
-            for sym, info in all_rates.items()
-            if sym in symbols
-        }
-    except Exception as e:
-        logger.warning("Batch funding rate fetch failed: %s", e)
-        # fallback to individual fetch
-        return fetch_funding_rates(symbols)
 
 def is_funding_extreme(rate: float, side: str) -> bool:
     """펀딩비가 해당 방향의 극단값인지 확인.
