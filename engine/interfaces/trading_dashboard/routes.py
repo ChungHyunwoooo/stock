@@ -31,6 +31,14 @@ async def api_candles(timeframe: str = "1h", limit: int = 200,
     if timeframe not in valid_tf:
         timeframe = "1h"
     if before:
+        try:
+            return _fetch_before(timeframe, limit, before, symbol)
+        except Exception:
+            return []
+    return fetch_candles(timeframe, limit, symbol)
+
+
+async def _fetch_before(timeframe, limit, before, symbol):
         import pandas as pd
         end = pd.Timestamp(before, unit="s", tz="UTC")
         tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
@@ -55,7 +63,6 @@ async def api_candles(timeframe: str = "1h", limit: int = 200,
                 "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
             })
         return candles[-limit:]
-    return fetch_candles(timeframe, limit, symbol)
 
 
 @router.get("/api/state")

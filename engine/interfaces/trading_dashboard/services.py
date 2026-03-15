@@ -42,7 +42,15 @@ def read_alt_state() -> dict:
 
 
 def fetch_candles(timeframe: str = "1h", limit: int = 200, symbol: str = "BTC/USDT") -> list[dict]:
-    """캔들 + 지표 데이터."""
+    """캔들 + 지표 데이터. 실패 시 빈 리스트."""
+    try:
+        return _fetch_candles_impl(timeframe, limit, symbol)
+    except Exception as e:
+        logger.warning("캔들 조회 실패 %s %s: %s", symbol, timeframe, e)
+        return []
+
+
+def _fetch_candles_impl(timeframe: str, limit: int, symbol: str) -> list[dict]:
     end = pd.Timestamp.now(tz="UTC")
     tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
     hours = tf_hours.get(timeframe, 1) * (limit + 60)
