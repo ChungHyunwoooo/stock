@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
+import pandas as pd
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
@@ -31,21 +32,19 @@ async def api_candles(timeframe: str = "1h", limit: int = 200,
     if timeframe not in valid_tf:
         timeframe = "1h"
     if before:
-        try:
-            return _fetch_before(timeframe, limit, before, symbol)
-        except Exception:
-            return []
+        return fetch_candles_before(timeframe, limit, before, symbol)
     return fetch_candles(timeframe, limit, symbol)
 
 
-async def _fetch_before(timeframe, limit, before, symbol):
-        import pandas as pd
+def fetch_candles_before(timeframe, limit, before, symbol):
+    """before 시점 이전 캔들. 실패 시 빈 리스트."""
+    try:
+        import numpy as np, talib
         end = pd.Timestamp(before, unit="s", tz="UTC")
         tf_hours = {"1m": 1/60, "5m": 5/60, "15m": 0.25, "1h": 1, "4h": 4, "1d": 24}
         hours = tf_hours.get(timeframe, 1) * (limit + 60)
         start = end - pd.Timedelta(hours=hours)
         from engine.interfaces.trading_dashboard.services import _provider
-        import numpy as np, talib
         df = _provider.fetch_ohlcv(symbol, str(start), str(end), timeframe)
         close = df["close"].values.astype(np.float64)
         ema20 = talib.EMA(close, timeperiod=20)
@@ -63,6 +62,8 @@ async def _fetch_before(timeframe, limit, before, symbol):
                 "rsi": round(float(rsi[i]), 2) if not np.isnan(rsi[i]) else None,
             })
         return candles[-limit:]
+    except Exception:
+        return []
 
 
 @router.get("/api/state")
