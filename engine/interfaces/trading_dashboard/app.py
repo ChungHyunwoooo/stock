@@ -958,10 +958,29 @@ document.getElementById('symbol-select').addEventListener('change', (e) => {
 
 // 알트 포지션 클릭 → 해당 차트로 전환
 function switchToSymbol(sym) {
+    // 현재 시간 범위 저장
+    var savedRange = chart.timeScale().getVisibleLogicalRange();
     currentSymbol = sym;
-    document.getElementById('symbol-select').value = sym;
+    var sel = document.getElementById('symbol-select');
+    if(!Array.from(sel.options).some(function(o){return o.value===sym;})) {
+        var opt = document.createElement('option');
+        opt.value = sym; opt.textContent = sym.replace('/USDT','');
+        sel.appendChild(opt);
+    }
+    sel.value = sym;
     allCandles = [];
-    loadCandles(currentTF);
+
+    fetch('/api/candles/' + currentTF + '?limit=500&symbol=' + encodeURIComponent(sym))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        allCandles = data;
+        renderCandles(data);
+        // 시간 범위 복원
+        if(savedRange) {
+            try { chart.timeScale().setVisibleLogicalRange(savedRange); } catch(e) {}
+        }
+        updateSyncTime();
+    });
     connectWS(currentTF);
 }
 
