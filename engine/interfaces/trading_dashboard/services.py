@@ -116,18 +116,30 @@ def get_alt_state() -> dict:
 
 
 def get_symbols() -> list[str]:
-    """사용 가능한 심볼 목록."""
-    syms = {"BTC/USDT"}
+    """사용 가능한 심볼 목록 (전체 바이낸스 선물)."""
+    syms = set()
+    # 전체 바이낸스 USDT-M 선물
     try:
-        from engine.strategy.alt_momentum import VALIDATED_SYMBOLS
-        syms.update(VALIDATED_SYMBOLS)
+        from engine.data.provider_crypto import _build_futures_exchange
+        ex = _build_futures_exchange("binance")
+        markets = ex.load_markets()
+        for s, m in markets.items():
+            if m.get("swap") and m.get("quote") == "USDT" and m.get("active"):
+                syms.add(s.replace(":USDT", ""))
     except Exception:
         pass
+    # fallback: 최소 기본 종목
+    if not syms:
+        syms = {"BTC/USDT", "ETH/USDT", "SOL/USDT"}
+        try:
+            from engine.strategy.alt_momentum import VALIDATED_SYMBOLS
+            syms.update(VALIDATED_SYMBOLS)
+        except Exception:
+            pass
+    # 거래이력 종목 추가
     alt_data = read_alt_state()
     for t in alt_data.get("trade_log", []):
         if t.get("symbol"): syms.add(t["symbol"])
-    for p in alt_data.get("positions", []):
-        if p.get("symbol"): syms.add(p["symbol"])
     return sorted(syms)
 
 

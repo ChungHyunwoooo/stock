@@ -77,10 +77,13 @@ body { background:#0b0e11; color:#eaecef; font-family:'Inter',sans-serif; font-s
 <body>
 
 <div class="header">
-    <div style="display:flex;align-items:center;gap:8px;">
-        <select id="symbol-select" style="background:#2b3139;color:#f0b90b;border:1px solid #2b3139;padding:4px 8px;font-size:16px;font-weight:700;border-radius:4px;cursor:pointer;">
-            <option value="BTC/USDT">BTC/USDT</option>
-        </select>
+    <div style="display:flex;align-items:center;gap:8px;position:relative;">
+        <div id="symbol-search-wrap" style="position:relative;">
+            <input id="symbol-search" type="text" placeholder="심볼 검색..." autocomplete="off"
+                style="background:#2b3139;color:#f0b90b;border:1px solid #2b3139;padding:4px 12px;font-size:16px;font-weight:700;border-radius:4px;width:180px;outline:none;"
+                onfocus="showSymbolDropdown()" oninput="filterSymbols()">
+            <div id="symbol-dropdown" style="display:none;position:absolute;top:100%;left:0;width:220px;max-height:400px;overflow-y:auto;background:#1e2329;border:1px solid #2b3139;border-radius:4px;z-index:100;"></div>
+        </div>
         <span class="price up" id="hdr-price">--</span>
     </div>
     <div class="info">
@@ -695,26 +698,11 @@ document.getElementById('alt-positions').addEventListener('click', function(e) {
     switchToSymbol(row.dataset.sym);
 });
 
-// 심볼 선택
-document.getElementById('symbol-select').addEventListener('change', (e) => {
-    currentSymbol = e.target.value;
-    allCandles = [];
-    loadCandles(currentTF);
-    connectWS(currentTF);
-});
-
-// 알트 포지션 클릭 → 해당 차트로 전환
+// 심볼 전환
 function switchToSymbol(sym) {
-    // 현재 시간 범위 저장
     var savedRange = chart.timeScale().getVisibleLogicalRange();
     currentSymbol = sym;
-    var sel = document.getElementById('symbol-select');
-    if(!Array.from(sel.options).some(function(o){return o.value===sym;})) {
-        var opt = document.createElement('option');
-        opt.value = sym; opt.textContent = sym.replace('/USDT','');
-        sel.appendChild(opt);
-    }
-    sel.value = sym;
+    document.getElementById('symbol-search').value = sym.replace('/USDT','');
     allCandles = [];
 
     // 이전 데이터 즉시 클리어
@@ -743,16 +731,9 @@ function switchToSymbol(sym) {
 
 function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
     try {
-        // 드롭다운에 없으면 추가
-        const sel = document.getElementById('symbol-select');
-        if(!Array.from(sel.options).some(o => o.value === sym)) {
-            const opt = document.createElement('option');
-            opt.value = sym; opt.textContent = sym.replace('/USDT','');
-            sel.appendChild(opt);
-        }
-
         // 캔들 로드
         currentSymbol = sym;
+        document.getElementById('symbol-search').value = sym.replace('/USDT','');
         sel.value = sym;
         candleSeries.setData([]); ema20Series.setData([]); ema50Series.setData([]);
         volumeSeries.setData([]); rsiSeries.setData([]); candleSeries.setMarkers([]);
@@ -805,34 +786,54 @@ function jumpToTrade(sym, entryTs, exitTs, side, pnl) {
     } catch(e) { console.error('jumpToTrade error:', e); }
 }
 
-// 심볼 목록 자동 로드
+// 심볼 검색 + 드롭다운
+var allSymbols = [];
 async function loadSymbols() {
     try {
         const res = await fetch('/api/symbols');
-        const syms = await res.json();
-        const sel = document.getElementById('symbol-select');
-        const current = sel.value;
-        sel.innerHTML = '';
-        syms.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s; opt.textContent = s.replace('/USDT','');
-            sel.appendChild(opt);
-        });
-        sel.value = current || 'BTC/USDT';
+        allSymbols = await res.json();
+        document.getElementById('symbol-search').value = currentSymbol.replace('/USDT','');
     } catch(e) {}
 }
 
-// switchToSymbol: 드롭다운에 없는 심볼도 동적 추가
-const origSwitch = switchToSymbol;
-switchToSymbol = function(sym) {
-    const sel = document.getElementById('symbol-select');
-    if(!Array.from(sel.options).some(o => o.value === sym)) {
-        const opt = document.createElement('option');
-        opt.value = sym; opt.textContent = sym.replace('/USDT','');
-        sel.appendChild(opt);
+function showSymbolDropdown() {
+    filterSymbols();
+    document.getElementById('symbol-dropdown').style.display = 'block';
+}
+
+function hideSymbolDropdown() {
+    setTimeout(function(){ document.getElementById('symbol-dropdown').style.display='none'; }, 200);
+}
+
+function filterSymbols() {
+    var query = document.getElementById('symbol-search').value.toUpperCase();
+    var dd = document.getElementById('symbol-dropdown');
+    var filtered = allSymbols.filter(function(s){ return s.replace('/USDT','').indexOf(query) >= 0; });
+    dd.innerHTML = '';
+    filtered.slice(0,30).forEach(function(s) {
+        var div = document.createElement('div');
+        div.textContent = s.replace('/USDT','');
+        div.style.cssText = 'padding:6px 12px;cursor:pointer;color:#eaecef;font-size:13px;';
+        div.onmouseenter = function(){ this.style.background='#2b3139'; };
+        div.onmouseleave = function(){ this.style.background='transparent'; };
+        div.onclick = function(){
+            switchToSymbol(s);
+            document.getElementById('symbol-search').value = s.replace('/USDT','');
+            document.getElementById('symbol-dropdown').style.display = 'none';
+        };
+        dd.appendChild(div);
+    });
+}
+
+document.getElementById('symbol-search').addEventListener('blur', hideSymbolDropdown);
+document.getElementById('symbol-search').addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') {
+        var query = this.value.toUpperCase();
+        var match = allSymbols.find(function(s){ return s.replace('/USDT','') === query; });
+        if(match) { switchToSymbol(match); this.value = match.replace('/USDT',''); }
+        document.getElementById('symbol-dropdown').style.display = 'none';
     }
-    origSwitch(sym);
-};
+});
 
 // Init
 loadSymbols();

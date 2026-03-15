@@ -32,8 +32,8 @@ class TestHTMLIntegrity:
     def test_html_has_rsi_chart(self):
         assert 'id="rsi-chart"' in client.get("/").text
 
-    def test_html_has_symbol_select(self):
-        assert 'id="symbol-select"' in client.get("/").text
+    def test_html_has_symbol_search(self):
+        assert 'id="symbol-search"' in client.get("/").text
 
     def test_html_has_history_panel(self):
         assert 'id="history-panel"' in client.get("/").text
